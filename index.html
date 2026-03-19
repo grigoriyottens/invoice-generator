@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Invoice Generator</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body,#ig-root{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;}
+#ig-root{min-height:100vh;background:#F7F7F5;display:flex;justify-content:center;padding:40px 16px;}
+.ig-card{background:#fff;border-radius:16px;border:1px solid #E8E8E4;padding:40px;width:100%;max-width:540px;height:fit-content;}
+.ig-badge{display:inline-flex;align-items:center;gap:6px;background:#F0FDF4;color:#16A34A;font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;padding:4px 10px;border-radius:20px;margin-bottom:16px;}
+.ig-badge-dot{width:6px;height:6px;border-radius:50%;background:#16A34A;}
+.ig-title{font-size:24px;font-weight:700;color:#111;margin-bottom:4px;letter-spacing:-0.3px;}
+.ig-sub{font-size:13px;color:#888;margin-bottom:32px;}
+.ig-divider{border:none;border-top:1px solid #F0F0EE;margin:24px 0;}
+.ig-section-label{font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#AAA;margin-bottom:12px;}
+.ig-field{display:flex;flex-direction:column;gap:5px;}
+.ig-field label{font-size:12px;font-weight:500;color:#555;display:flex;align-items:center;gap:6px;}
+.ig-field label span.opt{font-size:11px;font-weight:400;color:#BBB;font-style:italic;}
+.ig-input{border:1.5px solid #E8E8E4;border-radius:10px;padding:10px 13px;font-size:14px;color:#111;background:#FAFAF9;font-family:inherit;outline:none;width:100%;transition:border-color .15s;}
+.ig-input:focus{border-color:#111;background:#fff;}
+.ig-input::placeholder{color:#C0C0BC;}
+.ig-select{border:1.5px solid #E8E8E4;border-radius:10px;padding:10px 13px;font-size:14px;color:#111;background:#FAFAF9;font-family:inherit;outline:none;cursor:pointer;}
+.ig-row{display:flex;gap:12px;}
+.ig-row>*{flex:1;}
+.ig-row>.flex2{flex:2;}
+.ig-stack{display:flex;flex-direction:column;gap:12px;}
+.ig-co-btn{background:#FAFAF9;border:1.5px solid #E8E8E4;border-radius:10px;padding:12px 14px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:2px;width:100%;transition:all .15s;}
+.ig-co-btn:hover{border-color:#CCC;}
+.ig-co-btn.active{border-color:#111;background:#fff;box-shadow:0 0 0 3px rgba(0,0,0,0.04);}
+.ig-co-name{font-size:13px;font-weight:600;color:#111;}
+.ig-co-sub{font-size:12px;color:#999;}
+.ig-preview{margin-top:10px;padding:12px 14px;background:#FAFAF9;border-radius:10px;border-left:3px solid #E0E0DC;}
+.ig-preview-line{font-size:12px;color:#666;line-height:1.7;}
+.ig-total-bar{display:none;align-items:center;justify-content:space-between;background:#111;border-radius:12px;padding:16px 20px;margin-top:4px;}
+.ig-total-bar.visible{display:flex;}
+.ig-total-label{font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:#888;}
+.ig-total-value{font-size:22px;font-weight:700;color:#fff;letter-spacing:-0.5px;}
+.ig-gen-btn{width:100%;padding:14px;background:#111;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;margin-top:16px;}
+.ig-gen-btn:hover:not(:disabled){background:#222;transform:translateY(-1px);}
+.ig-gen-btn:disabled{background:#DDD;color:#999;cursor:not-allowed;transform:none;}
+.ig-pdf-wrap{width:100%;max-width:900px;display:flex;flex-direction:column;border-radius:16px;overflow:hidden;border:1px solid #E8E8E4;}
+.ig-pdf-bar{display:flex;justify-content:space-between;align-items:center;background:#fff;padding:18px 24px;border-bottom:1px solid #F0F0EE;}
+.ig-pdf-title{font-size:15px;font-weight:700;color:#111;}
+.ig-pdf-sub{font-size:12px;color:#999;margin-top:2px;}
+.ig-pdf-actions{display:flex;gap:10px;align-items:center;}
+.ig-back-btn{background:none;border:1.5px solid #E8E8E4;color:#555;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;font-family:inherit;transition:all .15s;}
+.ig-back-btn:hover{border-color:#999;color:#111;}
+.ig-dl-btn{background:#111;color:#fff;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;border:none;cursor:pointer;font-family:inherit;transition:background .15s;}
+.ig-dl-btn:hover{background:#333;}
+iframe.ig-frame{width:100%;height:80vh;border:none;background:#fff;}
+</style>
+</head>
+<body>
+<div id="ig-root"><div style="display:flex;align-items:center;justify-content:center;height:200px;color:#999;font-size:14px;">Loading…</div></div>
+
+<script type="module">
+import { jsPDF } from 'https://esm.sh/jspdf@2.5.1';
+import autoTable from 'https://esm.sh/jspdf-autotable@3.8.3';
+
+const COMPANIES=[
+  {id:"scorpios",name:"Scorpios Tech FZE",lines:["DTEC, Dubai Silicon Oasis","Dubai, AZ, 00000","United Arab Emirates"],email:"finance@scorpios.tech"},
+  {id:"coursiv",name:"Coursiv Limited",lines:["Georgiou A, 83 Shop 17","Potamos Germasogeias, 4047","Limassol, Cyprus"],extra:"VAT number: CY60132676A"},
+  {id:"finelo",name:"Finelo Limited",lines:["Georgiou A, 83 Shop 17","Potamos Germasogeias, 4047","Limassol, Cyprus"],extra:"VAT number: CY60132676A"},
+];
+const MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const ABBR={scorpios:"SCR",coursiv:"CCY",finelo:"FCY"};
+
+const S={
+  fromName:"Sachin Kumar",fromAddress:"C2/54 Sector 85, Faridabad, Haryana",
+  fromCountry:"India",fromEmail:"calicorao@gmail.com",fromTaxId:"",
+  companyId:"scorpios",day:"",month:"Mar",year:"2026",
+  description:"Weekly invoice",quantity:"1",unitCost:"",
+  currency:"$",
+  view:"form",pdfUrl:"",pdfFilename:""
+};
+let lastDoc=null;
+
+function fmt(n){const t=parseFloat(n)||0;return `${S.currency}${t%1===0?t.toFixed(0):t.toFixed(2)}`;}
+function calcTotal(){
+  const c=parseFloat(S.unitCost)||0,q=parseFloat(S.quantity)||1,t=c*q;
+  return S.unitCost?fmt(t):"";
+}
+function getFilename(){
+  return `${S.month} ${S.day} | ${calcTotal()} | ${S.fromName} (${ABBR[S.companyId]}).pdf`;
+}
+function isReady(){
+  return S.companyId&&S.day&&S.unitCost&&S.description&&S.fromName&&S.fromAddress&&S.fromCountry&&S.fromEmail;
+}
+window.setField=function(k,v){S[k]=v;updateDynamic();}
+window.setCurrency=function(c){S.currency=c;render();}
+function updateDynamic(){
+  const t=calcTotal(),r=isReady();
+  const tb=document.getElementById("ig-total");
+  if(tb){tb.className="ig-total-bar"+(t?" visible":"");const tv=document.getElementById("ig-tv");if(tv)tv.textContent=t;}
+  const btn=document.getElementById("ig-btn");
+  if(btn)btn.disabled=!r;
+  const fp=document.getElementById("ig-fnpreview");
+  if(fp){
+    if(r&&t){fp.style.display="block";const fn=document.getElementById("ig-fntext");if(fn)fn.textContent=getFilename();}
+    else fp.style.display="none";
+  }
+}
+window.setSelect=function(k,v){S[k]=v;render();}
+
+function buildPDF(){
+  const doc=new jsPDF({unit:"pt",format:"a4"});
+  const W=doc.internal.pageSize.getWidth();
+  const GRAY=[235,235,233],DARK=[17,17,17],MID=[120,120,115],LGRAY=[248,248,246];
+  const C1=40,C2=215,C3=400;
+  const co=COMPANIES.find(c=>c.id===S.companyId);
+  const total=calcTotal();
+  const unitFmt=fmt(S.unitCost);
+  const dateStr=`${S.month} ${S.day}, ${S.year}`;
+
+  doc.setFillColor(...LGRAY);
+  doc.rect(0,0,W,160,"F");
+
+  doc.setFont("helvetica","bold").setFontSize(9).setTextColor(...MID);
+  doc.text("BILL FROM",C1,44);
+  doc.setFont("helvetica","normal").setFontSize(9).setTextColor(...DARK);
+  doc.text(S.fromName,C1,58);
+  doc.setTextColor(...MID);
+  const fl=[S.fromAddress,S.fromCountry,S.fromEmail];
+  if(S.fromTaxId)fl.push(`TAX/VAT: ${S.fromTaxId}`);
+  fl.forEach((l,i)=>doc.text(l,C1,70+i*12));
+
+  doc.setFont("helvetica","bold").setFontSize(9).setTextColor(...MID);
+  doc.text("BILL TO",C2,44);
+  doc.setFont("helvetica","normal").setFontSize(9).setTextColor(...DARK);
+  doc.text(co.name,C2,58);
+  doc.setTextColor(...MID);
+  const tl=[...co.lines];
+  if(co.extra)tl.push(co.extra);
+  if(co.email)tl.push(co.email);
+  tl.forEach((l,i)=>doc.text(l,C2,70+i*12));
+
+  doc.setFont("helvetica","bold").setFontSize(20).setTextColor(...DARK);
+  doc.text("Invoice",C3,50);
+  doc.setFont("helvetica","normal").setFontSize(9).setTextColor(...MID);
+  doc.text(`#1  \u00B7  ${dateStr}`,C3,64);
+  doc.setFillColor(...DARK);
+  doc.roundedRect(C3,76,155,40,6,6,"F");
+  doc.setFontSize(8).setTextColor(180,180,175);
+  doc.text("AMOUNT DUE",C3+10,92);
+  doc.setFont("helvetica","bold").setFontSize(16).setTextColor(255,255,255);
+  doc.text(total,C3+10,112);
+
+  doc.setDrawColor(...GRAY).setLineWidth(1);
+  doc.line(C1,168,W-40,168);
+
+  autoTable(doc,{
+    startY:178,margin:{left:C1,right:40},
+    head:[["#","Description","Qty","Unit Cost","Total"]],
+    body:[[1,S.description,S.quantity,unitFmt,total]],
+    headStyles:{fillColor:GRAY,textColor:MID,fontStyle:"bold",fontSize:8,cellPadding:8},
+    bodyStyles:{textColor:DARK,fontSize:9,lineColor:GRAY,lineWidth:0.5,cellPadding:8},
+    alternateRowStyles:{fillColor:[255,255,255]},
+    columnStyles:{0:{cellWidth:30,halign:"center"},2:{cellWidth:45,halign:"right"},3:{cellWidth:72,halign:"right"},4:{cellWidth:72,halign:"right"}},
+    theme:"grid",tableLineColor:GRAY,tableLineWidth:0.5,
+  });
+
+  const ay=doc.lastAutoTable.finalY+20;
+  const TW=200,TX=W-40-TW;
+  doc.setFillColor(...LGRAY);
+  doc.roundedRect(TX-8,ay-6,TW+8,82,6,6,"F");
+
+  autoTable(doc,{
+    startY:ay,margin:{left:TX,right:40},tableWidth:TW,
+    body:[["Subtotal",total],["Tax (0%)",`${S.currency}0.00`]],
+    foot:[["Total",total]],
+    bodyStyles:{textColor:MID,fontSize:9,lineWidth:0,cellPadding:{top:5,bottom:5,left:6,right:6}},
+    footStyles:{textColor:DARK,fontStyle:"bold",fontSize:10,lineWidth:0,fillColor:false,cellPadding:{top:7,bottom:5,left:6,right:6}},
+    columnStyles:{0:{cellWidth:110,halign:"left"},1:{cellWidth:90,halign:"right"}},
+    didParseCell(data){if(data.column.index===1)data.cell.styles.halign="right";},
+    didDrawCell(data){
+      if(data.section==="foot"&&data.column.index===0&&data.row.index===0){
+        data.doc.setDrawColor(...GRAY);data.doc.setLineWidth(0.5);
+        data.doc.line(TX,data.cell.y,TX+TW,data.cell.y);
+      }
+    },
+    theme:"plain",
+  });
+  return doc;
+}
+
+window.handleGenerate=function(){
+  if(!isReady())return;
+  lastDoc=buildPDF();
+  S.pdfFilename=getFilename();
+  S.pdfUrl=lastDoc.output("datauristring");
+  S.view="pdf";
+  render();
+}
+window.handleDownload=function(){if(lastDoc)lastDoc.save(S.pdfFilename);}
+
+function escH(s){return String(s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");}
+function fld(label,key,ph="",opt=false,num=false){
+  const optTag=opt?`<span class="opt">optional</span>`:"";
+  const h=num?`oninput="this.value=this.value.replace(/[^0-9.]/g,'');setField('${key}',this.value)"`:`oninput="setField('${key}',this.value)"`;
+  return`<div class="ig-field"><label>${label}${optTag}</label><input class="ig-input" value="${escH(S[key]||"")}" placeholder="${ph}" ${h}></div>`;
+}
+
+function renderForm(){
+  const co=COMPANIES.find(c=>c.id===S.companyId);
+  const total=calcTotal(),ready=isReady();
+  const monthOpts=MONTHS.map(m=>`<option${m===S.month?" selected":""}>${m}</option>`).join("");
+  const cos=COMPANIES.map(c=>`<button class="ig-co-btn${c.id===S.companyId?" active":""}" onclick="setSelect('companyId','${c.id}')"><span class="ig-co-name">${c.name}</span><span class="ig-co-sub">${c.lines[2]} \u00B7 <strong>${ABBR[c.id]}</strong></span></button>`).join("");
+  const prev=co?`<div class="ig-preview">${[co.name,...co.lines,...(co.extra?[co.extra]:[]),...(co.email?[co.email]:[])].map(l=>`<div class="ig-preview-line">${escH(l)}</div>`).join("")}</div>`:"";
+
+  document.getElementById("ig-root").innerHTML=`
+  <div class="ig-card">
+    <div class="ig-badge"><span class="ig-badge-dot"></span>Invoice Generator</div>
+    <div class="ig-title">New Invoice</div>
+    <div class="ig-sub">Invoice #1 \u00B7 Always</div>
+    <div class="ig-section-label">Bill From</div>
+    <div class="ig-stack">
+      ${fld("Full Name","fromName")}
+      ${fld("Address","fromAddress")}
+      <div class="ig-row"><div>${fld("Country","fromCountry")}</div><div class="flex2">${fld("Email","fromEmail","email@example.com")}</div></div>
+      ${fld("TAX / VAT ID","fromTaxId","e.g. GB123456789",true)}
+    </div>
+    <hr class="ig-divider">
+    <div class="ig-section-label">Bill To</div>
+    <div class="ig-stack">${cos}</div>${prev}
+    <hr class="ig-divider">
+    <div class="ig-section-label">Invoice Date</div>
+    <div class="ig-row">
+      <select class="ig-select" onchange="setSelect('month',this.value)">${monthOpts}</select>
+      <input class="ig-input" placeholder="Day" value="${escH(S.day)}" maxlength="2" oninput="this.value=this.value.replace(/\\D/g,'');setField('day',this.value)">
+      <input class="ig-input" placeholder="Year" value="${escH(S.year)}" maxlength="4" oninput="this.value=this.value.replace(/\\D/g,'');setField('year',this.value)">
+    </div>
+    <hr class="ig-divider">
+    <div class="ig-section-label">Line Item</div>
+    <div class="ig-stack">
+      ${fld("Description","description")}
+      <div class="ig-row">
+        <div>${fld("Qty","quantity","1",false,true)}</div>
+        <div style="flex:2;display:flex;flex-direction:column;gap:4px;">
+          <span style="font-size:12px;color:#555;">Amount</span>
+          <div style="display:flex;border:1.5px solid #E8E8E4;border-radius:10px;overflow:hidden;background:#FAFAF9;">
+            <button onclick="setCurrency('$')" style="padding:10px 14px;background:${S.currency==='$'?'#111':'none'};color:${S.currency==='$'?'#fff':'#888'};border:none;cursor:pointer;font-size:14px;font-family:inherit;border-right:1px solid #E8E8E4;">$</button>
+            <button onclick="setCurrency('\u20AC')" style="padding:10px 14px;background:${S.currency==='\u20AC'?'#111':'none'};color:${S.currency==='\u20AC'?'#fff':'#888'};border:none;cursor:pointer;font-size:14px;font-family:inherit;border-right:1px solid #E8E8E4;">\u20AC</button>
+            <input style="border:none;outline:none;padding:10px 12px;font-size:14px;color:#111;background:transparent;font-family:inherit;width:100%;" placeholder="400" value="${escH(S.unitCost)}" oninput="this.value=this.value.replace(/[^0-9.]/g,'');setField('unitCost',this.value)">
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="ig-total" class="ig-total-bar${total?" visible":""}">
+      <span class="ig-total-label">Total</span>
+      <span id="ig-tv" class="ig-total-value">${total}</span>
+    </div>
+    <div id="ig-fnpreview" style="display:${ready&&total?"block":"none"};margin-top:12px;padding:10px 14px;background:#F7F7F5;border-radius:8px;border:1px dashed #DDD;">
+      <span style="color:#AAA;font-size:11px;text-transform:uppercase;letter-spacing:0.06em;font-weight:600;">File name preview</span><br>
+      <span id="ig-fntext" style="color:#111;font-weight:500;margin-top:4px;display:block;font-size:12px;">${ready&&total?escH(getFilename()):""}</span>
+    </div>
+    <button id="ig-btn" class="ig-gen-btn" onclick="handleGenerate()" ${!ready?"disabled":""}>Generate Invoice \u2192</button>
+  </div>`;
+}
+
+function renderPDF(){
+  document.getElementById("ig-root").innerHTML=`
+  <div class="ig-pdf-wrap">
+    <div class="ig-pdf-bar">
+      <div><div class="ig-pdf-title">Invoice ready</div><div class="ig-pdf-sub">${escH(S.pdfFilename)}</div></div>
+      <div class="ig-pdf-actions">
+        <button class="ig-back-btn" onclick="S.view='form';render()">&larr; New Invoice</button>
+        <button class="ig-dl-btn" onclick="handleDownload()">&#8595; Download PDF</button>
+      </div>
+    </div>
+    <iframe src="${S.pdfUrl}" class="ig-frame" title="Invoice Preview"></iframe>
+  </div>`;
+}
+
+window.render=function(){S.view==="pdf"?renderPDF():renderForm();}
+render();
+</script>
+</body>
+</html>
