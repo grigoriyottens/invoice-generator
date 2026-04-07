@@ -50,6 +50,8 @@ body,#ig-root{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
 .ig-dl-btn{background:#111;color:#fff;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;border:none;cursor:pointer;font-family:inherit;transition:background .15s;}
 .ig-dl-btn:hover{background:#333;}
 iframe.ig-frame{width:100%;height:80vh;border:none;background:#fff;}
+.ig-kz-section{background:#FAFAF9;border:1.5px solid #E8E8E4;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px;}
+.ig-kz-title{font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#888;margin-bottom:2px;}
 </style>
 </head>
 <body>
@@ -67,17 +69,25 @@ const COMPANIES=[
 const MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const ABBR={scorpios:"SCR",coursiv:"CCY",finelo:"FCY"};
 const PAYMENT_METHODS=["Wire Transfer","Cash","Deel","Payoneer Account","Revolut Account","via link(card/paypal)"];
+const COUNTRIES=["USA","Canada","United Kingdom","Cyprus","Kazakhstan","Singapore","Other"];
 
 const S={
-  fromName:"Sachin Kumar",fromAddress:"C2/54 Sector 85, Faridabad, Haryana",
-  fromCountry:"India",fromEmail:"calicorao@gmail.com",fromTaxId:"",
+  fromName:"",fromAddress:"",
+  fromCountry:"Kazakhstan",fromEmail:"",fromTaxId:"",
   paymentMethod:"Wire Transfer",paymentDetails:"",
-  companyId:"scorpios",day:"",month:"Mar",year:"2026",
-  description:"Weekly invoice",quantity:"1",unitCost:"",
+  // KZ Wire Transfer fields
+  kzBankHolder:"",kzCpEmail:"",kzCpAddress:"",
+  kzBankAddress:"",kzBankCountry:"Kazakhstan",
+  kzAccount:"",kzBinIin:"",kzBenefName:"",
+  kzKbe:"",kzKnp:"",kzPurpose:"",
+  companyId:"scorpios",day:"",month:"Apr",year:"2026",
+  description:"",quantity:"1",unitCost:"",
   currency:"$",
   view:"form",pdfUrl:"",pdfFilename:""
 };
 let lastDoc=null;
+
+function isKzWire(){return S.fromCountry==="Kazakhstan"&&S.paymentMethod==="Wire Transfer";}
 
 function fmt(n){const t=parseFloat(n)||0;return `${S.currency}${t%1===0?t.toFixed(0):t.toFixed(2)}`;}
 function calcTotal(){
@@ -129,14 +139,28 @@ function buildPDF(){
   fl.forEach((l,i)=>doc.text(l,C1,70+i*12));
 
   // Payment info below bill from details
-  const payY=70+fl.length*12+8;
+  let payY=70+fl.length*12+8;
   doc.setFont("helvetica","bold").setFontSize(8).setTextColor(...MID);
   doc.text("PAYMENT METHOD",C1,payY);
   doc.setFont("helvetica","normal").setFontSize(9).setTextColor(...DARK);
   doc.text(S.paymentMethod,C1,payY+12);
-  if(S.paymentDetails){
+  payY+=24;
+
+  if(isKzWire()){
+    const kzLines=[];
+    if(S.kzBankHolder)kzLines.push(`Account Holder: ${S.kzBankHolder}`);
+    if(S.kzAccount)kzLines.push(`Account: ${S.kzAccount}`);
+    if(S.kzBinIin)kzLines.push(`BIN/IIN: ${S.kzBinIin}`);
+    if(S.kzBenefName)kzLines.push(`Beneficiary: ${S.kzBenefName}`);
+    if(S.kzKbe)kzLines.push(`KBE: ${S.kzKbe}`);
+    if(S.kzKnp)kzLines.push(`KNP: ${S.kzKnp}`);
+    if(S.kzBankAddress)kzLines.push(`Bank: ${S.kzBankAddress}`);
+    if(S.kzPurpose)kzLines.push(`Purpose: ${S.kzPurpose}`);
+    doc.setTextColor(...MID).setFontSize(8);
+    kzLines.forEach((l,i)=>doc.text(l,C1,payY+i*11));
+  } else if(S.paymentDetails){
     doc.setTextColor(...MID);
-    doc.text(S.paymentDetails,C1,payY+24);
+    doc.text(S.paymentDetails,C1,payY);
   }
 
   doc.setFont("helvetica","bold").setFontSize(9).setTextColor(...MID);
@@ -215,6 +239,27 @@ function fld(label,key,ph="",opt=false,num=false){
   return`<div class="ig-field"><label>${label}${optTag}</label><input class="ig-input" value="${escH(S[key]||"")}" placeholder="${ph}" ${h}></div>`;
 }
 
+function renderKzFields(){
+  return `
+  <div class="ig-kz-section">
+    <div class="ig-kz-title">Kazakhstan Wire Transfer Details</div>
+    ${fld("Bank Account Holder Name","kzBankHolder","Full legal name")}
+    ${fld("Counterparty Email","kzCpEmail","email@example.com")}
+    ${fld("Counterparty Address","kzCpAddress","Full address")}
+    ${fld("Bank Address","kzBankAddress","Full bank address")}
+    <div class="ig-field">
+      <label>Bank Country</label>
+      <input class="ig-input" value="${escH(S.kzBankCountry)}" placeholder="Kazakhstan" oninput="setField('kzBankCountry',this.value)">
+    </div>
+    ${fld("Счет получателя","kzAccount","Номер счета получателя")}
+    ${fld("БИН/ИИН","kzBinIin","БИН или ИИН получателя")}
+    ${fld("Наименование получателя","kzBenefName","Полное наименование получателя")}
+    ${fld("КБЕ","kzKbe","Код бенефициара")}
+    ${fld("КНП","kzKnp","Код назначения платежа")}
+    ${fld("Назначение платежа","kzPurpose","Описание назначения платежа")}
+  </div>`;
+}
+
 function renderForm(){
   const co=COMPANIES.find(c=>c.id===S.companyId);
   const total=calcTotal(),ready=isReady();
@@ -222,6 +267,11 @@ function renderForm(){
   const cos=COMPANIES.map(c=>`<button class="ig-co-btn${c.id===S.companyId?" active":""}" onclick="setSelect('companyId','${c.id}')"><span class="ig-co-name">${c.name}</span><span class="ig-co-sub">${c.lines[2]} \u00B7 <strong>${ABBR[c.id]}</strong></span></button>`).join("");
   const prev=co?`<div class="ig-preview">${[co.name,...co.lines,...(co.extra?[co.extra]:[]),...(co.email?[co.email]:[])].map(l=>`<div class="ig-preview-line">${escH(l)}</div>`).join("")}</div>`:"";
   const pmOpts=PAYMENT_METHODS.map(m=>`<option${m===S.paymentMethod?" selected":""}>${escH(m)}</option>`).join("");
+  const countryOpts=COUNTRIES.map(c=>`<option${c===S.fromCountry?" selected":""}>${escH(c)}</option>`).join("");
+
+  const paymentSection=isKzWire()
+    ? renderKzFields()
+    : fld("Payment Details","paymentDetails","e.g. IBAN, account number, Deel profile link…",true);
 
   document.getElementById("ig-root").innerHTML=`
   <div class="ig-card">
@@ -230,15 +280,21 @@ function renderForm(){
     <div class="ig-sub">Invoice #1 \u00B7 Always</div>
     <div class="ig-section-label">Bill From</div>
     <div class="ig-stack">
-      ${fld("Full Name","fromName")}
-      ${fld("Address","fromAddress")}
-      <div class="ig-row"><div>${fld("Country","fromCountry")}</div><div class="flex2">${fld("Email","fromEmail","email@example.com")}</div></div>
+      ${fld("Full Name","fromName","Full legal name")}
+      ${fld("Address","fromAddress","Full address")}
+      <div class="ig-row">
+        <div class="ig-field">
+          <label>Country</label>
+          <select class="ig-select" onchange="setSelect('fromCountry',this.value)">${countryOpts}</select>
+        </div>
+        <div class="flex2">${fld("Email","fromEmail","email@example.com")}</div>
+      </div>
       ${fld("TAX / VAT ID","fromTaxId","e.g. GB123456789",true)}
       <div class="ig-field">
         <label>Payment Method</label>
         <select class="ig-select" onchange="setSelect('paymentMethod',this.value)">${pmOpts}</select>
       </div>
-      ${fld("Payment Details","paymentDetails","e.g. IBAN, account number, Deel profile link…",true)}
+      ${paymentSection}
     </div>
     <hr class="ig-divider">
     <div class="ig-section-label">Bill To</div>
@@ -253,7 +309,7 @@ function renderForm(){
     <hr class="ig-divider">
     <div class="ig-section-label">Line Item</div>
     <div class="ig-stack">
-      ${fld("Description","description")}
+      ${fld("Description","description","Service description")}
       <div class="ig-row">
         <div>${fld("Qty","quantity","1",false,true)}</div>
         <div style="flex:2;display:flex;flex-direction:column;gap:4px;">
