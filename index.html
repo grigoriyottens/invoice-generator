@@ -22,15 +22,12 @@ body,#ig-root{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
 .ig-input:focus{border-color:#111;background:#fff;}
 .ig-input::placeholder{color:#C0C0BC;}
 .ig-select{border:1.5px solid #E8E8E4;border-radius:10px;padding:10px 13px;font-size:14px;color:#111;background:#FAFAF9;font-family:inherit;outline:none;cursor:pointer;width:100%;}
-.ig-row{display:flex;gap:12px;}
-.ig-row>*{flex:1;}
-.ig-row>.flex2{flex:2;}
+.ig-row{display:flex;gap:12px;}.ig-row>*{flex:1;}.ig-row>.flex2{flex:2;}
 .ig-stack{display:flex;flex-direction:column;gap:12px;}
 .ig-co-btn{background:#FAFAF9;border:1.5px solid #E8E8E4;border-radius:10px;padding:12px 14px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:2px;width:100%;transition:all .15s;}
 .ig-co-btn:hover{border-color:#CCC;}
 .ig-co-btn.active{border-color:#111;background:#fff;box-shadow:0 0 0 3px rgba(0,0,0,0.04);}
-.ig-co-name{font-size:13px;font-weight:600;color:#111;}
-.ig-co-sub{font-size:12px;color:#999;}
+.ig-co-name{font-size:13px;font-weight:600;color:#111;}.ig-co-sub{font-size:12px;color:#999;}
 .ig-preview{margin-top:10px;padding:12px 14px;background:#FAFAF9;border-radius:10px;border-left:3px solid #E0E0DC;}
 .ig-preview-line{font-size:12px;color:#666;line-height:1.7;}
 .ig-total-bar{display:none;align-items:center;justify-content:space-between;background:#111;border-radius:12px;padding:16px 20px;margin-top:4px;}
@@ -42,8 +39,7 @@ body,#ig-root{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
 .ig-gen-btn:disabled{background:#DDD;color:#999;cursor:not-allowed;transform:none;}
 .ig-pdf-wrap{width:100%;max-width:900px;display:flex;flex-direction:column;border-radius:16px;overflow:hidden;border:1px solid #E8E8E4;}
 .ig-pdf-bar{display:flex;justify-content:space-between;align-items:center;background:#fff;padding:18px 24px;border-bottom:1px solid #F0F0EE;}
-.ig-pdf-title{font-size:15px;font-weight:700;color:#111;}
-.ig-pdf-sub{font-size:12px;color:#999;margin-top:2px;}
+.ig-pdf-title{font-size:15px;font-weight:700;color:#111;}.ig-pdf-sub{font-size:12px;color:#999;margin-top:2px;}
 .ig-pdf-actions{display:flex;gap:10px;align-items:center;}
 .ig-back-btn{background:none;border:1.5px solid #E8E8E4;color:#555;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;font-family:inherit;transition:all .15s;}
 .ig-back-btn:hover{border-color:#999;color:#111;}
@@ -58,8 +54,7 @@ iframe.ig-frame{width:100%;height:80vh;border:none;background:#fff;}
 .ig-drop{border:2px dashed #D0D0CC;border-radius:12px;padding:24px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:24px;background:#FAFAF9;}
 .ig-drop:hover,.ig-drop.over{border-color:#111;background:#F0F0EE;}
 .ig-drop-icon{font-size:28px;margin-bottom:8px;opacity:0.5;}
-.ig-drop-text{font-size:13px;color:#888;line-height:1.5;}
-.ig-drop-text strong{color:#555;}
+.ig-drop-text{font-size:13px;color:#888;line-height:1.5;}.ig-drop-text strong{color:#555;}
 .ig-drop-input{display:none;}
 .ig-drop-parsing{display:flex;align-items:center;gap:10px;justify-content:center;padding:20px;}
 .ig-drop-parsing .ig-spinner{width:20px;height:20px;}
@@ -69,231 +64,46 @@ iframe.ig-frame{width:100%;height:80vh;border:none;background:#fff;}
 </head>
 <body>
 <div id="ig-root"><div style="display:flex;align-items:center;justify-content:center;height:200px;color:#999;font-size:14px;">Loading...</div></div>
-
 <script type="module">
 import { jsPDF } from 'https://esm.sh/jspdf@2.5.1';
 import autoTable from 'https://esm.sh/jspdf-autotable@3.8.3';
-
-// ============================================================
-//  CONFIG — update this with your Railway app URL
-// ============================================================
-var API_URL = "https://invoice-automation-production.up.railway.app";
-
-var fontRegularB64 = null, fontBoldB64 = null, fontsReady = false;
-async function loadFonts() {
-  try {
-    var r = await Promise.all([
-      fetch('https://cdn.jsdelivr.net/npm/dejavu-fonts-ttf@2.37.3/ttf/DejaVuSans.ttf').then(function(r){return r.arrayBuffer();}),
-      fetch('https://cdn.jsdelivr.net/npm/dejavu-fonts-ttf@2.37.3/ttf/DejaVuSans-Bold.ttf').then(function(r){return r.arrayBuffer();}),
-    ]);
-    fontRegularB64 = ab2b64(r[0]); fontBoldB64 = ab2b64(r[1]); fontsReady = true;
-  } catch (e) { console.warn('Font load failed', e); }
-}
+var API_URL = "https://invoice-automation-production-8f7d.up.railway.app";
+var fontRegularB64=null,fontBoldB64=null,fontsReady=false;
+async function loadFonts(){try{var r=await Promise.all([fetch('https://cdn.jsdelivr.net/npm/dejavu-fonts-ttf@2.37.3/ttf/DejaVuSans.ttf').then(function(r){return r.arrayBuffer();}),fetch('https://cdn.jsdelivr.net/npm/dejavu-fonts-ttf@2.37.3/ttf/DejaVuSans-Bold.ttf').then(function(r){return r.arrayBuffer();})]);fontRegularB64=ab2b64(r[0]);fontBoldB64=ab2b64(r[1]);fontsReady=true;}catch(e){console.warn('Font load failed',e);}}
 function ab2b64(buf){var b='';var u=new Uint8Array(buf);for(var i=0;i<u.byteLength;i++)b+=String.fromCharCode(u[i]);return btoa(b);}
 function regFonts(doc){if(!fontsReady)return'helvetica';doc.addFileToVFS('DV.ttf',fontRegularB64);doc.addFont('DV.ttf','DV','normal');doc.addFileToVFS('DVB.ttf',fontBoldB64);doc.addFont('DVB.ttf','DV','bold');return'DV';}
-
-var CO=[
-  {id:"scorpios",name:"Scorpios Tech FZE",lines:["DTEC, Dubai Silicon Oasis","Dubai, AZ, 00000","United Arab Emirates"],email:"finance@scorpios.tech"},
-  {id:"coursiv",name:"Coursiv Limited",lines:["Georgiou A, 83 Shop 17","Potamos Germasogeias, 4047","Limassol, Cyprus"],extra:"VAT number: CY60132676A"},
-  {id:"finelo",name:"Finelo Limited",lines:["Georgiou A, 83 Shop 17","Potamos Germasogeias, 4047","Limassol, Cyprus"],extra:"VAT number: CY60132676A"},
-];
+var CO=[{id:"scorpios",name:"Scorpios Tech FZE",lines:["DTEC, Dubai Silicon Oasis","Dubai, AZ, 00000","United Arab Emirates"],email:"finance@scorpios.tech"},{id:"coursiv",name:"Coursiv Limited",lines:["Georgiou A, 83 Shop 17","Potamos Germasogeias, 4047","Limassol, Cyprus"],extra:"VAT number: CY60132676A"},{id:"finelo",name:"Finelo Limited",lines:["Georgiou A, 83 Shop 17","Potamos Germasogeias, 4047","Limassol, Cyprus"],extra:"VAT number: CY60132676A"}];
 var MO=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 var AB={scorpios:"SCR",coursiv:"CCY",finelo:"FCY"};
 var PM=["Wire Transfer","Cash","Deel","Payoneer Account","Revolut Account","via link(card/paypal)"];
 var CN=["USA","Canada","United Kingdom","Cyprus","Kazakhstan","Singapore","Other"];
-
-var S={
-  fromName:"",fromAddress:"",fromCountry:"Kazakhstan",fromEmail:"",fromTaxId:"",
-  paymentMethod:"Wire Transfer",paymentDetails:"",
-  kzBankHolder:"",kzCpEmail:"",kzCpAddress:"",kzBankAddress:"",kzBankCountry:"Kazakhstan",
-  kzAccount:"",kzBinIin:"",kzBenefName:"",kzKbe:"",kzKnp:"",kzPurpose:"",
-  companyId:"scorpios",day:"",month:"Apr",year:"2026",
-  description:"",quantity:"1",unitCost:"",currency:"$",
-  view:"form",pdfUrl:"",pdfFilename:"",
-  _dropState:"idle",_dropMsg:""
-};
-window._S=S;
-var lastDoc=null;
-
+var S={fromName:"",fromAddress:"",fromCountry:"Kazakhstan",fromEmail:"",fromTaxId:"",paymentMethod:"Wire Transfer",paymentDetails:"",kzBankHolder:"",kzCpEmail:"",kzCpAddress:"",kzBankAddress:"",kzBankCountry:"Kazakhstan",kzAccount:"",kzBinIin:"",kzBenefName:"",kzKbe:"",kzKnp:"",kzPurpose:"",companyId:"scorpios",day:"",month:"Apr",year:"2026",description:"",quantity:"1",unitCost:"",currency:"$",view:"form",pdfUrl:"",pdfFilename:"",_dropState:"idle",_dropMsg:""};
+window._S=S;var lastDoc=null;
 function isKZ(){return S.fromCountry==="Kazakhstan"&&S.paymentMethod==="Wire Transfer";}
 function fmt(n){var t=parseFloat(n)||0;return S.currency+(t%1===0?t.toFixed(0):t.toFixed(2));}
 function calcT(){var c=parseFloat(S.unitCost)||0,q=parseFloat(S.quantity)||1;return S.unitCost?fmt(c*q):"";}
 function getFn(){return S.month+" "+S.day+" | "+calcT()+" | "+S.fromName+" ("+AB[S.companyId]+").pdf";}
 function isOK(){return S.companyId&&S.day&&S.unitCost&&S.description&&S.fromName&&S.fromAddress&&S.fromCountry&&S.fromEmail&&S.paymentMethod;}
-
 window.sf=function(k,v){S[k]=v;upd();}
 window.sc=function(c){S.currency=c;ren();}
 window.ss=function(k,v){S[k]=v;ren();}
-
-function upd(){
-  var t=calcT(),r=isOK();
-  var tb=document.getElementById("ig-total");
-  if(tb){tb.className="ig-total-bar"+(t?" visible":"");var tv=document.getElementById("ig-tv");if(tv)tv.textContent=t;}
-  var btn=document.getElementById("ig-btn");
-  if(btn)btn.disabled=!r;
-  var fp=document.getElementById("ig-fnpreview");
-  if(fp){if(r&&t){fp.style.display="block";var fn=document.getElementById("ig-fntext");if(fn)fn.textContent=getFn();}else fp.style.display="none";}
-}
-
-// ── Invoice Parser (calls Railway API) ──────────────────────
+function upd(){var t=calcT(),r=isOK();var tb=document.getElementById("ig-total");if(tb){tb.className="ig-total-bar"+(t?" visible":"");var tv=document.getElementById("ig-tv");if(tv)tv.textContent=t;}var btn=document.getElementById("ig-btn");if(btn)btn.disabled=!r;var fp=document.getElementById("ig-fnpreview");if(fp){if(r&&t){fp.style.display="block";var fn=document.getElementById("ig-fntext");if(fn)fn.textContent=getFn();}else fp.style.display="none";}}
 window.triggerUpload=function(){document.getElementById("ig-file-input").click();}
-
-window.handleFileChange=function(input){
-  if(input.files&&input.files[0])parseFile(input.files[0]);
-}
-
-window.handleDrop=function(ev){
-  ev.preventDefault();
-  var el=document.getElementById("ig-dropzone");
-  if(el)el.classList.remove("over");
-  var files=ev.dataTransfer&&ev.dataTransfer.files;
-  if(files&&files[0])parseFile(files[0]);
-}
-
-window.handleDragOver=function(ev){
-  ev.preventDefault();
-  var el=document.getElementById("ig-dropzone");
-  if(el)el.classList.add("over");
-}
-
-window.handleDragLeave=function(ev){
-  var el=document.getElementById("ig-dropzone");
-  if(el)el.classList.remove("over");
-}
-
-function parseFile(file){
-  var ext=file.name.toLowerCase().split(".").pop();
-  if(["pdf","png","jpg","jpeg","webp"].indexOf(ext)===-1){
-    S._dropState="error";S._dropMsg="Unsupported file. Use PDF, PNG, or JPG.";ren();return;
-  }
-  S._dropState="parsing";S._dropMsg=file.name;ren();
-
-  var fd=new FormData();
-  fd.append("file",file);
-
-  fetch(API_URL+"/parse-invoice",{method:"POST",body:fd})
-  .then(function(r){
-    if(!r.ok)return r.json().then(function(d){throw new Error(d.error||"Server error "+r.status);});
-    return r.json();
-  })
-  .then(function(d){
-    // Map response to form state
-    var fields=["fromName","fromAddress","fromCountry","fromEmail","fromTaxId",
-      "paymentMethod","paymentDetails","kzBankHolder","kzCpEmail","kzCpAddress",
-      "kzBankAddress","kzBankCountry","kzAccount","kzBinIin","kzBenefName",
-      "kzKbe","kzKnp","kzPurpose","companyId","description","quantity",
-      "unitCost","currency","day","month","year"];
-    fields.forEach(function(k){if(d[k]!==undefined&&d[k]!=="")S[k]=d[k];});
-    S._dropState="ok";S._dropMsg="Parsed: "+file.name;
-    ren();
-  })
-  .catch(function(e){
-    console.error("Parse error:",e);
-    S._dropState="error";S._dropMsg=e.message||"Failed to parse invoice";
-    ren();
-  });
-}
-
-// ── KZ Payment Lines for PDF ────────────────────────────────
-function kzL(){
-  var l=[];
-  if(S.kzBankHolder)l.push("Account Holder: "+S.kzBankHolder);
-  if(S.kzAccount)l.push("Account: "+S.kzAccount);
-  if(S.kzBinIin)l.push("BIN/IIN: "+S.kzBinIin);
-  if(S.kzBenefName)l.push("Beneficiary: "+S.kzBenefName);
-  if(S.kzKbe)l.push("KBE: "+S.kzKbe);
-  if(S.kzKnp)l.push("KNP: "+S.kzKnp);
-  if(S.kzBankAddress)l.push("Bank: "+S.kzBankAddress);
-  if(S.kzPurpose)l.push("Purpose: "+S.kzPurpose);
-  return l;
-}
-
-// ── PDF Builder ─────────────────────────────────────────────
-function mkPDF(){
-  var doc=new jsPDF({unit:"pt",format:"a4"});var F=regFonts(doc);var W=doc.internal.pageSize.getWidth();
-  var G=[235,235,233],D=[17,17,17],M=[120,120,115],L=[248,248,246];var C1=40,C2=250,LH=12;
-  var co=CO.find(function(c){return c.id===S.companyId;});var total=calcT(),uf=fmt(S.unitCost);
-  var ds=S.month+" "+S.day+", "+S.year;
-  var fl=[S.fromName,S.fromAddress,S.fromCountry,S.fromEmail];
-  if(S.fromTaxId)fl.push("TAX/VAT: "+S.fromTaxId);
-  var lH=14+fl.length*LH+20+12+14;
-  if(isKZ()){lH+=4+kzL().length*11;}else if(S.paymentDetails){lH+=12;}
-  var tr=[].concat(co.lines);if(co.extra)tr.push(co.extra);if(co.email)tr.push(co.email);
-  var rH=14+(1+tr.length)*LH;var hH=Math.max(lH,rH,120)+54;
-  doc.setFillColor(L[0],L[1],L[2]);doc.rect(0,0,W,hH,"F");
-  var y=36;doc.setFont(F,"bold").setFontSize(9).setTextColor(M[0],M[1],M[2]);doc.text("BILL FROM",C1,y);y+=14;
-  doc.setFont(F,"normal").setFontSize(9).setTextColor(D[0],D[1],D[2]);doc.text(fl[0],C1,y);doc.setTextColor(M[0],M[1],M[2]);
-  for(var i=1;i<fl.length;i++)doc.text(fl[i],C1,y+i*LH);y+=fl.length*LH+12;
-  doc.setFont(F,"bold").setFontSize(8).setTextColor(M[0],M[1],M[2]);doc.text("PAYMENT METHOD",C1,y);y+=12;
-  doc.setFont(F,"normal").setFontSize(9).setTextColor(D[0],D[1],D[2]);doc.text(S.paymentMethod,C1,y);y+=14;
-  if(isKZ()){doc.setFontSize(8).setTextColor(M[0],M[1],M[2]);kzL().forEach(function(l,i){doc.text(l,C1,y+i*11);});}
-  else if(S.paymentDetails){doc.setTextColor(M[0],M[1],M[2]).setFontSize(8);doc.text(S.paymentDetails,C1,y);}
-  var ry=36;doc.setFont(F,"bold").setFontSize(9).setTextColor(M[0],M[1],M[2]);doc.text("BILL TO",C2,ry);ry+=14;
-  doc.setFont(F,"normal").setFontSize(9).setTextColor(D[0],D[1],D[2]);doc.text(co.name,C2,ry);
-  doc.setTextColor(M[0],M[1],M[2]);tr.forEach(function(l,i){doc.text(l,C2,ry+(i+1)*LH);});
-  var IX=W-40;doc.setFont(F,"bold").setFontSize(22).setTextColor(D[0],D[1],D[2]);doc.text("Invoice",IX,52,{align:"right"});
-  doc.setFont(F,"normal").setFontSize(9).setTextColor(M[0],M[1],M[2]);doc.text("#1  \xB7 "+ds,IX,66,{align:"right"});
-  var bW=155,bH=40,bX=IX-bW,bY=78;doc.setFillColor(D[0],D[1],D[2]);doc.roundedRect(bX,bY,bW,bH,6,6,"F");
-  doc.setFontSize(8).setTextColor(180,180,175);doc.text("AMOUNT DUE",bX+10,bY+16);
-  doc.setFont(F,"bold").setFontSize(16).setTextColor(255,255,255);doc.text(total,bX+10,bY+34);
-  var dY=hH+8;doc.setDrawColor(G[0],G[1],G[2]).setLineWidth(1);doc.line(C1,dY,W-40,dY);
-  autoTable(doc,{startY:dY+10,margin:{left:C1,right:40},head:[["#","Description","Qty","Unit Cost","Total"]],body:[[1,S.description,S.quantity,uf,total]],headStyles:{fillColor:G,textColor:M,fontStyle:"bold",fontSize:8,cellPadding:8,font:F},bodyStyles:{textColor:D,fontSize:9,lineColor:G,lineWidth:0.5,cellPadding:8,font:F},alternateRowStyles:{fillColor:[255,255,255]},columnStyles:{0:{cellWidth:30,halign:"center"},2:{cellWidth:45,halign:"right"},3:{cellWidth:72,halign:"right"},4:{cellWidth:72,halign:"right"}},theme:"grid",tableLineColor:G,tableLineWidth:0.5});
-  var ay=doc.lastAutoTable.finalY+20,TW=200,TX=W-40-TW;doc.setFillColor(L[0],L[1],L[2]);doc.roundedRect(TX-8,ay-6,TW+8,82,6,6,"F");
-  autoTable(doc,{startY:ay,margin:{left:TX,right:40},tableWidth:TW,body:[["Subtotal",total],["Tax (0%)",S.currency+"0.00"]],foot:[["Total",total]],bodyStyles:{textColor:M,fontSize:9,lineWidth:0,cellPadding:{top:5,bottom:5,left:6,right:6},font:F},footStyles:{textColor:D,fontStyle:"bold",fontSize:10,lineWidth:0,fillColor:false,cellPadding:{top:7,bottom:5,left:6,right:6},font:F},columnStyles:{0:{cellWidth:110,halign:"left"},1:{cellWidth:90,halign:"right"}},didParseCell:function(data){if(data.column.index===1)data.cell.styles.halign="right";},didDrawCell:function(data){if(data.section==="foot"&&data.column.index===0&&data.row.index===0){data.doc.setDrawColor(G[0],G[1],G[2]);data.doc.setLineWidth(0.5);data.doc.line(TX,data.cell.y,TX+TW,data.cell.y);}},theme:"plain"});
-  return doc;
-}
-
+window.handleFileChange=function(input){if(input.files&&input.files[0])parseFile(input.files[0]);}
+window.handleDrop=function(ev){ev.preventDefault();var el=document.getElementById("ig-dropzone");if(el)el.classList.remove("over");var files=ev.dataTransfer&&ev.dataTransfer.files;if(files&&files[0])parseFile(files[0]);}
+window.handleDragOver=function(ev){ev.preventDefault();var el=document.getElementById("ig-dropzone");if(el)el.classList.add("over");}
+window.handleDragLeave=function(ev){var el=document.getElementById("ig-dropzone");if(el)el.classList.remove("over");}
+function parseFile(file){var ext=file.name.toLowerCase().split(".").pop();if(["pdf","png","jpg","jpeg","webp"].indexOf(ext)===-1){S._dropState="error";S._dropMsg="Unsupported file. Use PDF, PNG, or JPG.";ren();return;}S._dropState="parsing";S._dropMsg=file.name;ren();var fd=new FormData();fd.append("file",file);fetch(API_URL+"/parse-invoice",{method:"POST",body:fd}).then(function(r){if(!r.ok)return r.json().then(function(d){throw new Error(d.error||"Server error "+r.status);});return r.json();}).then(function(d){var fields=["fromName","fromAddress","fromCountry","fromEmail","fromTaxId","paymentMethod","paymentDetails","kzBankHolder","kzCpEmail","kzCpAddress","kzBankAddress","kzBankCountry","kzAccount","kzBinIin","kzBenefName","kzKbe","kzKnp","kzPurpose","companyId","description","quantity","unitCost","currency","day","month","year"];fields.forEach(function(k){if(d[k]!==undefined&&d[k]!=="")S[k]=d[k];});S._dropState="ok";S._dropMsg="Parsed: "+file.name;ren();}).catch(function(e){console.error("Parse error:",e);S._dropState="error";S._dropMsg=e.message||"Failed to parse invoice";ren();});}
+function kzL(){var l=[];if(S.kzBankHolder)l.push("Account Holder: "+S.kzBankHolder);if(S.kzAccount)l.push("Account: "+S.kzAccount);if(S.kzBinIin)l.push("BIN/IIN: "+S.kzBinIin);if(S.kzBenefName)l.push("Beneficiary: "+S.kzBenefName);if(S.kzKbe)l.push("KBE: "+S.kzKbe);if(S.kzKnp)l.push("KNP: "+S.kzKnp);if(S.kzBankAddress)l.push("Bank: "+S.kzBankAddress);if(S.kzPurpose)l.push("Purpose: "+S.kzPurpose);return l;}
+function mkPDF(){var doc=new jsPDF({unit:"pt",format:"a4"});var F=regFonts(doc);var W=doc.internal.pageSize.getWidth();var G=[235,235,233],D=[17,17,17],M=[120,120,115],L=[248,248,246];var C1=40,C2=250,LH=12;var co=CO.find(function(c){return c.id===S.companyId;});var total=calcT(),uf=fmt(S.unitCost);var ds=S.month+" "+S.day+", "+S.year;var fl=[S.fromName,S.fromAddress,S.fromCountry,S.fromEmail];if(S.fromTaxId)fl.push("TAX/VAT: "+S.fromTaxId);var lH=14+fl.length*LH+20+12+14;if(isKZ()){lH+=4+kzL().length*11;}else if(S.paymentDetails){lH+=12;}var tr=[].concat(co.lines);if(co.extra)tr.push(co.extra);if(co.email)tr.push(co.email);var rH=14+(1+tr.length)*LH;var hH=Math.max(lH,rH,120)+54;doc.setFillColor(L[0],L[1],L[2]);doc.rect(0,0,W,hH,"F");var y=36;doc.setFont(F,"bold").setFontSize(9).setTextColor(M[0],M[1],M[2]);doc.text("BILL FROM",C1,y);y+=14;doc.setFont(F,"normal").setFontSize(9).setTextColor(D[0],D[1],D[2]);doc.text(fl[0],C1,y);doc.setTextColor(M[0],M[1],M[2]);for(var i=1;i<fl.length;i++)doc.text(fl[i],C1,y+i*LH);y+=fl.length*LH+12;doc.setFont(F,"bold").setFontSize(8).setTextColor(M[0],M[1],M[2]);doc.text("PAYMENT METHOD",C1,y);y+=12;doc.setFont(F,"normal").setFontSize(9).setTextColor(D[0],D[1],D[2]);doc.text(S.paymentMethod,C1,y);y+=14;if(isKZ()){doc.setFontSize(8).setTextColor(M[0],M[1],M[2]);kzL().forEach(function(l,i){doc.text(l,C1,y+i*11);});}else if(S.paymentDetails){doc.setTextColor(M[0],M[1],M[2]).setFontSize(8);doc.text(S.paymentDetails,C1,y);}var ry=36;doc.setFont(F,"bold").setFontSize(9).setTextColor(M[0],M[1],M[2]);doc.text("BILL TO",C2,ry);ry+=14;doc.setFont(F,"normal").setFontSize(9).setTextColor(D[0],D[1],D[2]);doc.text(co.name,C2,ry);doc.setTextColor(M[0],M[1],M[2]);tr.forEach(function(l,i){doc.text(l,C2,ry+(i+1)*LH);});var IX=W-40;doc.setFont(F,"bold").setFontSize(22).setTextColor(D[0],D[1],D[2]);doc.text("Invoice",IX,52,{align:"right"});doc.setFont(F,"normal").setFontSize(9).setTextColor(M[0],M[1],M[2]);doc.text("#1  \xB7 "+ds,IX,66,{align:"right"});var bW=155,bH=40,bX=IX-bW,bY=78;doc.setFillColor(D[0],D[1],D[2]);doc.roundedRect(bX,bY,bW,bH,6,6,"F");doc.setFontSize(8).setTextColor(180,180,175);doc.text("AMOUNT DUE",bX+10,bY+16);doc.setFont(F,"bold").setFontSize(16).setTextColor(255,255,255);doc.text(total,bX+10,bY+34);var dY=hH+8;doc.setDrawColor(G[0],G[1],G[2]).setLineWidth(1);doc.line(C1,dY,W-40,dY);autoTable(doc,{startY:dY+10,margin:{left:C1,right:40},head:[["#","Description","Qty","Unit Cost","Total"]],body:[[1,S.description,S.quantity,uf,total]],headStyles:{fillColor:G,textColor:M,fontStyle:"bold",fontSize:8,cellPadding:8,font:F},bodyStyles:{textColor:D,fontSize:9,lineColor:G,lineWidth:0.5,cellPadding:8,font:F},alternateRowStyles:{fillColor:[255,255,255]},columnStyles:{0:{cellWidth:30,halign:"center"},2:{cellWidth:45,halign:"right"},3:{cellWidth:72,halign:"right"},4:{cellWidth:72,halign:"right"}},theme:"grid",tableLineColor:G,tableLineWidth:0.5});var ay=doc.lastAutoTable.finalY+20,TW=200,TX=W-40-TW;doc.setFillColor(L[0],L[1],L[2]);doc.roundedRect(TX-8,ay-6,TW+8,82,6,6,"F");autoTable(doc,{startY:ay,margin:{left:TX,right:40},tableWidth:TW,body:[["Subtotal",total],["Tax (0%)",S.currency+"0.00"]],foot:[["Total",total]],bodyStyles:{textColor:M,fontSize:9,lineWidth:0,cellPadding:{top:5,bottom:5,left:6,right:6},font:F},footStyles:{textColor:D,fontStyle:"bold",fontSize:10,lineWidth:0,fillColor:false,cellPadding:{top:7,bottom:5,left:6,right:6},font:F},columnStyles:{0:{cellWidth:110,halign:"left"},1:{cellWidth:90,halign:"right"}},didParseCell:function(data){if(data.column.index===1)data.cell.styles.halign="right";},didDrawCell:function(data){if(data.section==="foot"&&data.column.index===0&&data.row.index===0){data.doc.setDrawColor(G[0],G[1],G[2]);data.doc.setLineWidth(0.5);data.doc.line(TX,data.cell.y,TX+TW,data.cell.y);}},theme:"plain"});return doc;}
 window.doGen=function(){if(!isOK())return;lastDoc=mkPDF();S.pdfFilename=getFn();S.pdfUrl=lastDoc.output("datauristring");S.view="pdf";ren();}
 window.doDL=function(){if(lastDoc)lastDoc.save(S.pdfFilename);}
-
 function esc(s){return String(s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");}
-function fld(label,key,ph,opt,num){
-  var o=opt?"<span class='opt'>optional</span>":"";
-  var ev=num?"oninput=\"this.value=this.value.replace(/[^0-9.]/g,'');sf('"+key+"',this.value)\"":"oninput=\"sf('"+key+"',this.value)\"";
-  return "<div class='ig-field'><label>"+label+o+"</label><input class='ig-input' value='"+esc(S[key]||"")+"' placeholder='"+ph+"' "+ev+"></div>";
-}
-
-function kzForm(){
-  return "<div class='ig-kz-section'><div class='ig-kz-title'>Kazakhstan Wire Transfer Details</div>"
-    +fld("Bank Account Holder Name","kzBankHolder","Full legal name",false,false)
-    +fld("Counterparty Email","kzCpEmail","email@example.com",false,false)
-    +fld("Counterparty Address","kzCpAddress","Full address",false,false)
-    +fld("Bank Address","kzBankAddress","Full bank address",false,false)
-    +"<div class='ig-field'><label>Bank Country</label><input class='ig-input' value='"+esc(S.kzBankCountry)+"' placeholder='Kazakhstan' oninput=\"sf('kzBankCountry',this.value)\"></div>"
-    +fld("\u0421\u0447\u0435\u0442 \u043f\u043e\u043b\u0443\u0447\u0430\u0442\u0435\u043b\u044f","kzAccount","\u041d\u043e\u043c\u0435\u0440 \u0441\u0447\u0435\u0442\u0430 \u043f\u043e\u043b\u0443\u0447\u0430\u0442\u0435\u043b\u044f",false,false)
-    +fld("\u0411\u0418\u041d/\u0418\u0418\u041d","kzBinIin","\u0411\u0418\u041d \u0438\u043b\u0438 \u0418\u0418\u041d \u043f\u043e\u043b\u0443\u0447\u0430\u0442\u0435\u043b\u044f",false,false)
-    +fld("\u041d\u0430\u0438\u043c\u0435\u043d\u043e\u0432\u0430\u043d\u0438\u0435 \u043f\u043e\u043b\u0443\u0447\u0430\u0442\u0435\u043b\u044f","kzBenefName","\u041f\u043e\u043b\u043d\u043e\u0435 \u043d\u0430\u0438\u043c\u0435\u043d\u043e\u0432\u0430\u043d\u0438\u0435 \u043f\u043e\u043b\u0443\u0447\u0430\u0442\u0435\u043b\u044f",false,false)
-    +fld("\u041a\u0411\u0415","kzKbe","\u041a\u043e\u0434 \u0431\u0435\u043d\u0435\u0444\u0438\u0446\u0438\u0430\u0440\u0430",false,false)
-    +fld("\u041a\u041d\u041f","kzKnp","\u041a\u043e\u0434 \u043d\u0430\u0437\u043d\u0430\u0447\u0435\u043d\u0438\u044f \u043f\u043b\u0430\u0442\u0435\u0436\u0430",false,false)
-    +fld("\u041d\u0430\u0437\u043d\u0430\u0447\u0435\u043d\u0438\u0435 \u043f\u043b\u0430\u0442\u0435\u0436\u0430","kzPurpose","\u041e\u043f\u0438\u0441\u0430\u043d\u0438\u0435 \u043d\u0430\u0437\u043d\u0430\u0447\u0435\u043d\u0438\u044f \u043f\u043b\u0430\u0442\u0435\u0436\u0430",false,false)
-    +"</div>";
-}
-
-// ── Drop zone HTML ──────────────────────────────────────────
-function dropZone(){
-  if(S._dropState==="parsing"){
-    return "<div class='ig-drop ig-drop-parsing'><div class='ig-spinner'></div><span style='font-size:13px;color:#888;'>Parsing "+esc(S._dropMsg)+"...</span></div>";
-  }
-  if(S._dropState==="ok"){
-    return "<div class='ig-drop ig-drop-ok' onclick='triggerUpload()'>\u2705 "+esc(S._dropMsg)+" \u2014 fields filled. Drop another to re-parse.<input type='file' id='ig-file-input' class='ig-drop-input' accept='.pdf,.png,.jpg,.jpeg,.webp' onchange='handleFileChange(this)'></div>";
-  }
-  if(S._dropState==="error"){
-    return "<div class='ig-drop ig-drop-err' onclick='triggerUpload()'>\u274c "+esc(S._dropMsg)+"<br><span style='font-weight:400;font-size:12px;'>Click or drop to try again</span><input type='file' id='ig-file-input' class='ig-drop-input' accept='.pdf,.png,.jpg,.jpeg,.webp' onchange='handleFileChange(this)'></div>";
-  }
-  return "<div class='ig-drop' id='ig-dropzone' onclick='triggerUpload()' ondrop='handleDrop(event)' ondragover='handleDragOver(event)' ondragleave='handleDragLeave(event)'>"
-    +"<div class='ig-drop-icon'>\ud83d\udcc4</div>"
-    +"<div class='ig-drop-text'><strong>Drop an invoice here</strong> or click to browse<br>PDF, PNG, JPG \u2014 auto-fills all fields via AI</div>"
-    +"<input type='file' id='ig-file-input' class='ig-drop-input' accept='.pdf,.png,.jpg,.jpeg,.webp' onchange='handleFileChange(this)'>"
-    +"</div>";
-}
-
-// ── Render ───────────────────────────────────────────────────
+function fld(label,key,ph,opt,num){var o=opt?"<span class='opt'>optional</span>":"";var ev=num?"oninput=\"this.value=this.value.replace(/[^0-9.]/g,'');sf('"+key+"',this.value)\"":"oninput=\"sf('"+key+"',this.value)\"";return "<div class='ig-field'><label>"+label+o+"</label><input class='ig-input' value='"+esc(S[key]||"")+"' placeholder='"+ph+"' "+ev+"></div>";}
+function kzForm(){return "<div class='ig-kz-section'><div class='ig-kz-title'>Kazakhstan Wire Transfer Details</div>"+fld("Bank Account Holder Name","kzBankHolder","Full legal name",false,false)+fld("Counterparty Email","kzCpEmail","email@example.com",false,false)+fld("Counterparty Address","kzCpAddress","Full address",false,false)+fld("Bank Address","kzBankAddress","Full bank address",false,false)+"<div class='ig-field'><label>Bank Country</label><input class='ig-input' value='"+esc(S.kzBankCountry)+"' placeholder='Kazakhstan' oninput=\"sf('kzBankCountry',this.value)\"></div>"+fld("\u0421\u0447\u0435\u0442 \u043f\u043e\u043b\u0443\u0447\u0430\u0442\u0435\u043b\u044f","kzAccount","\u041d\u043e\u043c\u0435\u0440 \u0441\u0447\u0435\u0442\u0430 \u043f\u043e\u043b\u0443\u0447\u0430\u0442\u0435\u043b\u044f",false,false)+fld("\u0411\u0418\u041d/\u0418\u0418\u041d","kzBinIin","\u0411\u0418\u041d \u0438\u043b\u0438 \u0418\u0418\u041d \u043f\u043e\u043b\u0443\u0447\u0430\u0442\u0435\u043b\u044f",false,false)+fld("\u041d\u0430\u0438\u043c\u0435\u043d\u043e\u0432\u0430\u043d\u0438\u0435 \u043f\u043e\u043b\u0443\u0447\u0430\u0442\u0435\u043b\u044f","kzBenefName","\u041f\u043e\u043b\u043d\u043e\u0435 \u043d\u0430\u0438\u043c\u0435\u043d\u043e\u0432\u0430\u043d\u0438\u0435 \u043f\u043e\u043b\u0443\u0447\u0430\u0442\u0435\u043b\u044f",false,false)+fld("\u041a\u0411\u0415","kzKbe","\u041a\u043e\u0434 \u0431\u0435\u043d\u0435\u0444\u0438\u0446\u0438\u0430\u0440\u0430",false,false)+fld("\u041a\u041d\u041f","kzKnp","\u041a\u043e\u0434 \u043d\u0430\u0437\u043d\u0430\u0447\u0435\u043d\u0438\u044f \u043f\u043b\u0430\u0442\u0435\u0436\u0430",false,false)+fld("\u041d\u0430\u0437\u043d\u0430\u0447\u0435\u043d\u0438\u0435 \u043f\u043b\u0430\u0442\u0435\u0436\u0430","kzPurpose","\u041e\u043f\u0438\u0441\u0430\u043d\u0438\u0435 \u043d\u0430\u0437\u043d\u0430\u0447\u0435\u043d\u0438\u044f \u043f\u043b\u0430\u0442\u0435\u0436\u0430",false,false)+"</div>";}
+function dropZone(){if(S._dropState==="parsing"){return "<div class='ig-drop ig-drop-parsing'><div class='ig-spinner'></div><span style='font-size:13px;color:#888;'>Parsing "+esc(S._dropMsg)+"...</span></div>";}if(S._dropState==="ok"){return "<div class='ig-drop ig-drop-ok' onclick='triggerUpload()'>\u2705 "+esc(S._dropMsg)+" \u2014 fields filled. Drop another to re-parse.<input type='file' id='ig-file-input' class='ig-drop-input' accept='.pdf,.png,.jpg,.jpeg,.webp' onchange='handleFileChange(this)'></div>";}if(S._dropState==="error"){return "<div class='ig-drop ig-drop-err' onclick='triggerUpload()'>\u274c "+esc(S._dropMsg)+"<br><span style='font-weight:400;font-size:12px;'>Click or drop to try again</span><input type='file' id='ig-file-input' class='ig-drop-input' accept='.pdf,.png,.jpg,.jpeg,.webp' onchange='handleFileChange(this)'></div>";}return "<div class='ig-drop' id='ig-dropzone' onclick='triggerUpload()' ondrop='handleDrop(event)' ondragover='handleDragOver(event)' ondragleave='handleDragLeave(event)'><div class='ig-drop-icon'>\ud83d\udcc4</div><div class='ig-drop-text'><strong>Drop an invoice here</strong> or click to browse<br>PDF, PNG, JPG \u2014 auto-fills all fields via AI</div><input type='file' id='ig-file-input' class='ig-drop-input' accept='.pdf,.png,.jpg,.jpeg,.webp' onchange='handleFileChange(this)'></div>";}
 function ren(){
-  if(S.view==="pdf"){
-    document.getElementById("ig-root").innerHTML=
-      "<div class='ig-pdf-wrap'><div class='ig-pdf-bar'><div><div class='ig-pdf-title'>Invoice ready</div><div class='ig-pdf-sub'>"+esc(S.pdfFilename)+"</div></div><div class='ig-pdf-actions'><button class='ig-back-btn' onclick=\"window._S.view='form';ren()\">\u2190 New Invoice</button><button class='ig-dl-btn' onclick='doDL()'>\u2193 Download PDF</button></div></div><iframe src='"+S.pdfUrl+"' class='ig-frame' title='Invoice Preview'></iframe></div>";
-    return;
-  }
+  if(S.view==="pdf"){document.getElementById("ig-root").innerHTML="<div class='ig-pdf-wrap'><div class='ig-pdf-bar'><div><div class='ig-pdf-title'>Invoice ready</div><div class='ig-pdf-sub'>"+esc(S.pdfFilename)+"</div></div><div class='ig-pdf-actions'><button class='ig-back-btn' onclick=\"window._S.view='form';ren()\">\u2190 New Invoice</button><button class='ig-dl-btn' onclick='doDL()'>\u2193 Download PDF</button></div></div><iframe src='"+S.pdfUrl+"' class='ig-frame' title='Invoice Preview'></iframe></div>";return;}
   var co=CO.find(function(c){return c.id===S.companyId;});var total=calcT(),ready=isOK();
   var moH="";MO.forEach(function(m){moH+="<option"+(m===S.month?" selected":"")+">"+m+"</option>";});
   var coH="";CO.forEach(function(c){coH+="<button class='ig-co-btn"+(c.id===S.companyId?" active":"")+"' onclick=\"ss('companyId','"+c.id+"')\"><span class='ig-co-name'>"+c.name+"</span><span class='ig-co-sub'>"+c.lines[2]+" \xB7 <strong>"+AB[c.id]+"</strong></span></button>";});
@@ -302,7 +112,6 @@ function ren(){
   var cnH="";CN.forEach(function(c){cnH+="<option"+(c===S.fromCountry?" selected":"")+">"+esc(c)+"</option>";});
   var payH=isKZ()?kzForm():fld("Payment Details","paymentDetails","e.g. IBAN, account number, Deel profile link\u2026",true,false);
   var curS=S.currency==="$";
-
   document.getElementById("ig-root").innerHTML=
   "<div class='ig-card'>"
   +"<div class='ig-badge'><span class='ig-badge-dot'></span>Invoice Generator</div>"
@@ -311,12 +120,12 @@ function ren(){
   +dropZone()
   +"<div class='ig-section-label'>Bill From</div>"
   +"<div class='ig-stack'>"
-    +fld("Full Name","fromName","Full legal name",false,false)
-    +fld("Address","fromAddress","Full address",false,false)
-    +"<div class='ig-row'><div class='ig-field'><label>Country</label><select class='ig-select' onchange=\"ss('fromCountry',this.value)\">"+cnH+"</select></div><div class='flex2'>"+fld("Email","fromEmail","email@example.com",false,false)+"</div></div>"
-    +fld("TAX / VAT ID","fromTaxId","e.g. GB123456789",true,false)
-    +"<div class='ig-field'><label>Payment Method</label><select class='ig-select' onchange=\"ss('paymentMethod',this.value)\">"+pmH+"</select></div>"
-    +payH
+  +fld("Full Name","fromName","Full legal name",false,false)
+  +fld("Address","fromAddress","Full address",false,false)
+  +"<div class='ig-row'><div class='ig-field'><label>Country</label><select class='ig-select' onchange=\"ss('fromCountry',this.value)\">"+cnH+"</select></div><div class='flex2'>"+fld("Email","fromEmail","email@example.com",false,false)+"</div></div>"
+  +fld("TAX / VAT ID","fromTaxId","e.g. GB123456789",true,false)
+  +"<div class='ig-field'><label>Payment Method</label><select class='ig-select' onchange=\"ss('paymentMethod',this.value)\">"+pmH+"</select></div>"
+  +payH
   +"</div>"
   +"<hr class='ig-divider'>"
   +"<div class='ig-section-label'>Bill To</div>"
@@ -330,14 +139,14 @@ function ren(){
   +"<hr class='ig-divider'>"
   +"<div class='ig-section-label'>Line Item</div>"
   +"<div class='ig-stack'>"
-    +fld("Description","description","Service description",false,false)
-    +"<div class='ig-row'><div>"+fld("Qty","quantity","1",false,true)+"</div>"
-    +"<div style='flex:2;display:flex;flex-direction:column;gap:4px;'><span style='font-size:12px;color:#555;'>Amount</span>"
-    +"<div style='display:flex;border:1.5px solid #E8E8E4;border-radius:10px;overflow:hidden;background:#FAFAF9;'>"
-    +"<button onclick=\"sc('$')\" style='padding:10px 14px;background:"+(curS?"#111":"none")+";color:"+(curS?"#fff":"#888")+";border:none;cursor:pointer;font-size:14px;font-family:inherit;border-right:1px solid #E8E8E4;'>$</button>"
-    +"<button onclick=\"sc('\u20AC')\" style='padding:10px 14px;background:"+(curS?"none":"#111")+";color:"+(curS?"#888":"#fff")+";border:none;cursor:pointer;font-size:14px;font-family:inherit;border-right:1px solid #E8E8E4;'>\u20AC</button>"
-    +"<input style='border:none;outline:none;padding:10px 12px;font-size:14px;color:#111;background:transparent;font-family:inherit;width:100%;' placeholder='400' value='"+esc(S.unitCost)+"' oninput=\"this.value=this.value.replace(/[^0-9.]/g,'');sf('unitCost',this.value)\">"
-    +"</div></div></div>"
+  +fld("Description","description","Service description",false,false)
+  +"<div class='ig-row'><div>"+fld("Qty","quantity","1",false,true)+"</div>"
+  +"<div style='flex:2;display:flex;flex-direction:column;gap:4px;'><span style='font-size:12px;color:#555;'>Amount</span>"
+  +"<div style='display:flex;border:1.5px solid #E8E8E4;border-radius:10px;overflow:hidden;background:#FAFAF9;'>"
+  +"<button onclick=\"sc('$')\" style='padding:10px 14px;background:"+(curS?"#111":"none")+";color:"+(curS?"#fff":"#888")+";border:none;cursor:pointer;font-size:14px;font-family:inherit;border-right:1px solid #E8E8E4;'>$</button>"
+  +"<button onclick=\"sc('\u20AC')\" style='padding:10px 14px;background:"+(curS?"none":"#111")+";color:"+(curS?"#888":"#fff")+";border:none;cursor:pointer;font-size:14px;font-family:inherit;border-right:1px solid #E8E8E4;'>\u20AC</button>"
+  +"<input style='border:none;outline:none;padding:10px 12px;font-size:14px;color:#111;background:transparent;font-family:inherit;width:100%;' placeholder='400' value='"+esc(S.unitCost)+"' oninput=\"this.value=this.value.replace(/[^0-9.]/g,'');sf('unitCost',this.value)\">"
+  +"</div></div></div>"
   +"</div>"
   +"<div id='ig-total' class='ig-total-bar"+(total?" visible":"")+"'><span class='ig-total-label'>Total</span><span id='ig-tv' class='ig-total-value'>"+total+"</span></div>"
   +"<div id='ig-fnpreview' style='display:"+(ready&&total?"block":"none")+";margin-top:12px;padding:10px 14px;background:#F7F7F5;border-radius:8px;border:1px dashed #DDD;'><span style='color:#AAA;font-size:11px;text-transform:uppercase;letter-spacing:0.06em;font-weight:600;'>File name preview</span><br><span id='ig-fntext' style='color:#111;font-weight:500;margin-top:4px;display:block;font-size:12px;'>"+(ready&&total?esc(getFn()):"")+"</span></div>"
@@ -345,12 +154,7 @@ function ren(){
   +"</div>";
 }
 window.ren=ren;
-
-(async function(){
-  document.getElementById("ig-root").innerHTML="<div class='ig-loading-overlay'><div class='ig-spinner'></div><span style='font-size:13px;color:#888;'>Loading fonts...</span></div>";
-  await loadFonts();
-  ren();
-})();
+(async function(){document.getElementById("ig-root").innerHTML="<div class='ig-loading-overlay'><div class='ig-spinner'></div><span style='font-size:13px;color:#888;'>Loading fonts...</span></div>";await loadFonts();ren();})();
 </script>
 </body>
 </html>
