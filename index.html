@@ -52,6 +52,9 @@ body,#ig-root{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
 iframe.ig-frame{width:100%;height:80vh;border:none;background:#fff;}
 .ig-kz-section{background:#FAFAF9;border:1.5px solid #E8E8E4;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px;}
 .ig-kz-title{font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#888;margin-bottom:2px;}
+.ig-loading-overlay{position:fixed;inset:0;background:rgba(255,255,255,0.9);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;gap:12px;}
+.ig-spinner{width:28px;height:28px;border:3px solid #E8E8E4;border-top-color:#111;border-radius:50%;animation:spin .6s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
@@ -61,6 +64,40 @@ iframe.ig-frame{width:100%;height:80vh;border:none;background:#fff;}
 import { jsPDF } from 'https://esm.sh/jspdf@2.5.1';
 import autoTable from 'https://esm.sh/jspdf-autotable@3.8.3';
 
+// ── Load Cyrillic-capable font from CDN ──
+let fontRegularB64 = null, fontBoldB64 = null, fontsReady = false;
+
+async function loadFonts() {
+  try {
+    const [reg, bold] = await Promise.all([
+      fetch('https://cdn.jsdelivr.net/npm/dejavu-fonts-ttf@2.37.3/ttf/DejaVuSans.ttf').then(r => r.arrayBuffer()),
+      fetch('https://cdn.jsdelivr.net/npm/dejavu-fonts-ttf@2.37.3/ttf/DejaVuSans-Bold.ttf').then(r => r.arrayBuffer()),
+    ]);
+    fontRegularB64 = arrayBufferToBase64(reg);
+    fontBoldB64 = arrayBufferToBase64(bold);
+    fontsReady = true;
+  } catch (e) {
+    console.warn('Font loading failed, falling back to helvetica', e);
+  }
+}
+
+function arrayBufferToBase64(buffer) {
+  let binary = '';
+  const bytes = new Uint8Array(buffer);
+  for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary);
+}
+
+function registerFonts(doc) {
+  if (!fontsReady) return 'helvetica';
+  doc.addFileToVFS('DejaVuSans.ttf', fontRegularB64);
+  doc.addFont('DejaVuSans.ttf', 'DejaVu', 'normal');
+  doc.addFileToVFS('DejaVuSans-Bold.ttf', fontBoldB64);
+  doc.addFont('DejaVuSans-Bold.ttf', 'DejaVu', 'bold');
+  return 'DejaVu';
+}
+
+// ── Data ──
 const COMPANIES=[
   {id:"scorpios",name:"Scorpios Tech FZE",lines:["DTEC, Dubai Silicon Oasis","Dubai, AZ, 00000","United Arab Emirates"],email:"finance@scorpios.tech"},
   {id:"coursiv",name:"Coursiv Limited",lines:["Georgiou A, 83 Shop 17","Potamos Germasogeias, 4047","Limassol, Cyprus"],extra:"VAT number: CY60132676A"},
@@ -75,7 +112,6 @@ const S={
   fromName:"",fromAddress:"",
   fromCountry:"Kazakhstan",fromEmail:"",fromTaxId:"",
   paymentMethod:"Wire Transfer",paymentDetails:"",
-  // KZ Wire Transfer fields
   kzBankHolder:"",kzCpEmail:"",kzCpAddress:"",
   kzBankAddress:"",kzBankCountry:"Kazakhstan",
   kzAccount:"",kzBinIin:"",kzBenefName:"",
@@ -88,7 +124,6 @@ const S={
 let lastDoc=null;
 
 function isKzWire(){return S.fromCountry==="Kazakhstan"&&S.paymentMethod==="Wire Transfer";}
-
 function fmt(n){const t=parseFloat(n)||0;return `${S.currency}${t%1===0?t.toFixed(0):t.toFixed(2)}`;}
 function calcTotal(){
   const c=parseFloat(S.unitCost)||0,q=parseFloat(S.quantity)||1,t=c*q;
@@ -116,88 +151,120 @@ function updateDynamic(){
 }
 window.setSelect=function(k,v){S[k]=v;render();}
 
+// ── PDF Builder ──
+function getKzLines(){
+  const lines=[];
+  if(S.kzBankHolder)lines.push("Account Holder: "+S.kzBankHolder);
+  if(S.kzAccount)lines.push("Account: "+S.kzAccount);
+  if(S.kzBinIin)lines.push("BIN/IIN: "+S.kzBinIin);
+  if(S.kzBenefName)lines.push("Beneficiary: "+S.kzBenefName);
+  if(S.kzKbe)lines.push("KBE: "+S.kzKbe);
+  if(S.kzKnp)lines.push("KNP: "+S.kzKnp);
+  if(S.kzBankAddress)lines.push("Bank: "+S.kzBankAddress);
+  if(S.kzPurpose)lines.push("Purpose: "+S.kzPurpose);
+  return lines;
+}
+
 function buildPDF(){
   const doc=new jsPDF({unit:"pt",format:"a4"});
+  const F=registerFonts(doc);
   const W=doc.internal.pageSize.getWidth();
   const GRAY=[235,235,233],DARK=[17,17,17],MID=[120,120,115],LGRAY=[248,248,246];
-  const C1=40,C2=215,C3=400;
+  const C1=40,C2=250,LH=12;
   const co=COMPANIES.find(c=>c.id===S.companyId);
   const total=calcTotal();
   const unitFmt=fmt(S.unitCost);
   const dateStr=`${S.month} ${S.day}, ${S.year}`;
 
+  // Measure left column
+  const fromLines=[S.fromName,S.fromAddress,S.fromCountry,S.fromEmail];
+  if(S.fromTaxId)fromLines.push("TAX/VAT: "+S.fromTaxId);
+  let leftH=14+fromLines.length*LH+20+12+14;
+  if(isKzWire()){leftH+=4+getKzLines().length*11;}
+  else if(S.paymentDetails){leftH+=12;}
+
+  // Measure right column
+  const toRest=[...co.lines];
+  if(co.extra)toRest.push(co.extra);
+  if(co.email)toRest.push(co.email);
+  let rightH=14+(1+toRest.length)*LH;
+
+  const headerH=Math.max(leftH,rightH,120)+54;
+
+  // Header background
   doc.setFillColor(...LGRAY);
-  doc.rect(0,0,W,160,"F");
+  doc.rect(0,0,W,headerH,"F");
 
-  doc.setFont("helvetica","bold").setFontSize(9).setTextColor(...MID);
-  doc.text("BILL FROM",C1,44);
-  doc.setFont("helvetica","normal").setFontSize(9).setTextColor(...DARK);
-  doc.text(S.fromName,C1,58);
+  // BILL FROM
+  let y=36;
+  doc.setFont(F,"bold").setFontSize(9).setTextColor(...MID);
+  doc.text("BILL FROM",C1,y);
+  y+=14;
+  doc.setFont(F,"normal").setFontSize(9).setTextColor(...DARK);
+  doc.text(fromLines[0],C1,y);
   doc.setTextColor(...MID);
-  const fl=[S.fromAddress,S.fromCountry,S.fromEmail];
-  if(S.fromTaxId)fl.push(`TAX/VAT: ${S.fromTaxId}`);
-  fl.forEach((l,i)=>doc.text(l,C1,70+i*12));
+  for(let i=1;i<fromLines.length;i++)doc.text(fromLines[i],C1,y+i*LH);
+  y+=fromLines.length*LH+12;
 
-  // Payment info below bill from details
-  let payY=70+fl.length*12+8;
-  doc.setFont("helvetica","bold").setFontSize(8).setTextColor(...MID);
-  doc.text("PAYMENT METHOD",C1,payY);
-  doc.setFont("helvetica","normal").setFontSize(9).setTextColor(...DARK);
-  doc.text(S.paymentMethod,C1,payY+12);
-  payY+=24;
-
+  // Payment method
+  doc.setFont(F,"bold").setFontSize(8).setTextColor(...MID);
+  doc.text("PAYMENT METHOD",C1,y);
+  y+=12;
+  doc.setFont(F,"normal").setFontSize(9).setTextColor(...DARK);
+  doc.text(S.paymentMethod,C1,y);
+  y+=14;
   if(isKzWire()){
-    const kzLines=[];
-    if(S.kzBankHolder)kzLines.push(`Account Holder: ${S.kzBankHolder}`);
-    if(S.kzAccount)kzLines.push(`Account: ${S.kzAccount}`);
-    if(S.kzBinIin)kzLines.push(`BIN/IIN: ${S.kzBinIin}`);
-    if(S.kzBenefName)kzLines.push(`Beneficiary: ${S.kzBenefName}`);
-    if(S.kzKbe)kzLines.push(`KBE: ${S.kzKbe}`);
-    if(S.kzKnp)kzLines.push(`KNP: ${S.kzKnp}`);
-    if(S.kzBankAddress)kzLines.push(`Bank: ${S.kzBankAddress}`);
-    if(S.kzPurpose)kzLines.push(`Purpose: ${S.kzPurpose}`);
+    doc.setFontSize(8).setTextColor(...MID);
+    getKzLines().forEach((l,i)=>doc.text(l,C1,y+i*11));
+  }else if(S.paymentDetails){
     doc.setTextColor(...MID).setFontSize(8);
-    kzLines.forEach((l,i)=>doc.text(l,C1,payY+i*11));
-  } else if(S.paymentDetails){
-    doc.setTextColor(...MID);
-    doc.text(S.paymentDetails,C1,payY);
+    doc.text(S.paymentDetails,C1,y);
   }
 
-  doc.setFont("helvetica","bold").setFontSize(9).setTextColor(...MID);
-  doc.text("BILL TO",C2,44);
-  doc.setFont("helvetica","normal").setFontSize(9).setTextColor(...DARK);
-  doc.text(co.name,C2,58);
+  // BILL TO
+  let ry=36;
+  doc.setFont(F,"bold").setFontSize(9).setTextColor(...MID);
+  doc.text("BILL TO",C2,ry);
+  ry+=14;
+  doc.setFont(F,"normal").setFontSize(9).setTextColor(...DARK);
+  doc.text(co.name,C2,ry);
   doc.setTextColor(...MID);
-  const tl=[...co.lines];
-  if(co.extra)tl.push(co.extra);
-  if(co.email)tl.push(co.email);
-  tl.forEach((l,i)=>doc.text(l,C2,70+i*12));
+  toRest.forEach((l,i)=>doc.text(l,C2,ry+(i+1)*LH));
 
-  doc.setFont("helvetica","bold").setFontSize(20).setTextColor(...DARK);
-  doc.text("Invoice",C3,50);
-  doc.setFont("helvetica","normal").setFontSize(9).setTextColor(...MID);
-  doc.text(`#1  \u00B7  ${dateStr}`,C3,64);
+  // Invoice title (right-aligned)
+  const IX=W-40;
+  doc.setFont(F,"bold").setFontSize(22).setTextColor(...DARK);
+  doc.text("Invoice",IX,52,{align:"right"});
+  doc.setFont(F,"normal").setFontSize(9).setTextColor(...MID);
+  doc.text("#1  \u00B7 "+dateStr,IX,66,{align:"right"});
+
+  // Amount due box
+  const boxW=155,boxH=40,boxX=IX-boxW,boxY=78;
   doc.setFillColor(...DARK);
-  doc.roundedRect(C3,76,155,40,6,6,"F");
+  doc.roundedRect(boxX,boxY,boxW,boxH,6,6,"F");
   doc.setFontSize(8).setTextColor(180,180,175);
-  doc.text("AMOUNT DUE",C3+10,92);
-  doc.setFont("helvetica","bold").setFontSize(16).setTextColor(255,255,255);
-  doc.text(total,C3+10,112);
+  doc.text("AMOUNT DUE",boxX+10,boxY+16);
+  doc.setFont(F,"bold").setFontSize(16).setTextColor(255,255,255);
+  doc.text(total,boxX+10,boxY+34);
 
+  // Divider
+  const divY=headerH+8;
   doc.setDrawColor(...GRAY).setLineWidth(1);
-  doc.line(C1,168,W-40,168);
+  doc.line(C1,divY,W-40,divY);
 
+  // Line items
   autoTable(doc,{
-    startY:178,margin:{left:C1,right:40},
+    startY:divY+10,margin:{left:C1,right:40},
     head:[["#","Description","Qty","Unit Cost","Total"]],
     body:[[1,S.description,S.quantity,unitFmt,total]],
-    headStyles:{fillColor:GRAY,textColor:MID,fontStyle:"bold",fontSize:8,cellPadding:8},
-    bodyStyles:{textColor:DARK,fontSize:9,lineColor:GRAY,lineWidth:0.5,cellPadding:8},
+    headStyles:{fillColor:GRAY,textColor:MID,fontStyle:"bold",fontSize:8,cellPadding:8,font:F},
+    bodyStyles:{textColor:DARK,fontSize:9,lineColor:GRAY,lineWidth:0.5,cellPadding:8,font:F},
     alternateRowStyles:{fillColor:[255,255,255]},
     columnStyles:{0:{cellWidth:30,halign:"center"},2:{cellWidth:45,halign:"right"},3:{cellWidth:72,halign:"right"},4:{cellWidth:72,halign:"right"}},
     theme:"grid",tableLineColor:GRAY,tableLineWidth:0.5,
   });
 
+  // Totals
   const ay=doc.lastAutoTable.finalY+20;
   const TW=200,TX=W-40-TW;
   doc.setFillColor(...LGRAY);
@@ -205,10 +272,10 @@ function buildPDF(){
 
   autoTable(doc,{
     startY:ay,margin:{left:TX,right:40},tableWidth:TW,
-    body:[["Subtotal",total],["Tax (0%)",`${S.currency}0.00`]],
+    body:[["Subtotal",total],["Tax (0%)",S.currency+"0.00"]],
     foot:[["Total",total]],
-    bodyStyles:{textColor:MID,fontSize:9,lineWidth:0,cellPadding:{top:5,bottom:5,left:6,right:6}},
-    footStyles:{textColor:DARK,fontStyle:"bold",fontSize:10,lineWidth:0,fillColor:false,cellPadding:{top:7,bottom:5,left:6,right:6}},
+    bodyStyles:{textColor:MID,fontSize:9,lineWidth:0,cellPadding:{top:5,bottom:5,left:6,right:6},font:F},
+    footStyles:{textColor:DARK,fontStyle:"bold",fontSize:10,lineWidth:0,fillColor:false,cellPadding:{top:7,bottom:5,left:6,right:6},font:F},
     columnStyles:{0:{cellWidth:110,halign:"left"},1:{cellWidth:90,halign:"right"}},
     didParseCell(data){if(data.column.index===1)data.cell.styles.halign="right";},
     didDrawCell(data){
@@ -251,12 +318,12 @@ function renderKzFields(){
       <label>Bank Country</label>
       <input class="ig-input" value="${escH(S.kzBankCountry)}" placeholder="Kazakhstan" oninput="setField('kzBankCountry',this.value)">
     </div>
-    ${fld("Счет получателя","kzAccount","Номер счета получателя")}
-    ${fld("БИН/ИИН","kzBinIin","БИН или ИИН получателя")}
-    ${fld("Наименование получателя","kzBenefName","Полное наименование получателя")}
-    ${fld("КБЕ","kzKbe","Код бенефициара")}
-    ${fld("КНП","kzKnp","Код назначения платежа")}
-    ${fld("Назначение платежа","kzPurpose","Описание назначения платежа")}
+    ${fld("\u0421\u0447\u0435\u0442 \u043F\u043E\u043B\u0443\u0447\u0430\u0442\u0435\u043B\u044F","kzAccount","\u041D\u043E\u043C\u0435\u0440 \u0441\u0447\u0435\u0442\u0430 \u043F\u043E\u043B\u0443\u0447\u0430\u0442\u0435\u043B\u044F")}
+    ${fld("\u0411\u0418\u041D/\u0418\u0418\u041D","kzBinIin","\u0411\u0418\u041D \u0438\u043B\u0438 \u0418\u0418\u041D \u043F\u043E\u043B\u0443\u0447\u0430\u0442\u0435\u043B\u044F")}
+    ${fld("\u041D\u0430\u0438\u043C\u0435\u043D\u043E\u0432\u0430\u043D\u0438\u0435 \u043F\u043E\u043B\u0443\u0447\u0430\u0442\u0435\u043B\u044F","kzBenefName","\u041F\u043E\u043B\u043D\u043E\u0435 \u043D\u0430\u0438\u043C\u0435\u043D\u043E\u0432\u0430\u043D\u0438\u0435 \u043F\u043E\u043B\u0443\u0447\u0430\u0442\u0435\u043B\u044F")}
+    ${fld("\u041A\u0411\u0415","kzKbe","\u041A\u043E\u0434 \u0431\u0435\u043D\u0435\u0444\u0438\u0446\u0438\u0430\u0440\u0430")}
+    ${fld("\u041A\u041D\u041F","kzKnp","\u041A\u043E\u0434 \u043D\u0430\u0437\u043D\u0430\u0447\u0435\u043D\u0438\u044F \u043F\u043B\u0430\u0442\u0435\u0436\u0430")}
+    ${fld("\u041D\u0430\u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435 \u043F\u043B\u0430\u0442\u0435\u0436\u0430","kzPurpose","\u041E\u043F\u0438\u0441\u0430\u043D\u0438\u0435 \u043D\u0430\u0437\u043D\u0430\u0447\u0435\u043D\u0438\u044F \u043F\u043B\u0430\u0442\u0435\u0436\u0430")}
   </div>`;
 }
 
@@ -271,7 +338,7 @@ function renderForm(){
 
   const paymentSection=isKzWire()
     ? renderKzFields()
-    : fld("Payment Details","paymentDetails","e.g. IBAN, account number, Deel profile link…",true);
+    : fld("Payment Details","paymentDetails","e.g. IBAN, account number, Deel profile link\u2026",true);
 
   document.getElementById("ig-root").innerHTML=`
   <div class="ig-card">
@@ -349,7 +416,13 @@ function renderPDF(){
 }
 
 window.render=function(){S.view==="pdf"?renderPDF():renderForm();}
-render();
+
+// ── Init: load fonts then render ──
+(async function(){
+  document.getElementById("ig-root").innerHTML=`<div class="ig-loading-overlay"><div class="ig-spinner"></div><span style="font-size:13px;color:#888;">Loading fonts\u2026</span></div>`;
+  await loadFonts();
+  render();
+})();
 </script>
 </body>
 </html>
