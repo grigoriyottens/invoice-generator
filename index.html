@@ -21,7 +21,7 @@ body,#ig-root{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
 .ig-input{border:1.5px solid #E8E8E4;border-radius:10px;padding:10px 13px;font-size:14px;color:#111;background:#FAFAF9;font-family:inherit;outline:none;width:100%;transition:border-color .15s;}
 .ig-input:focus{border-color:#111;background:#fff;}
 .ig-input::placeholder{color:#C0C0BC;}
-.ig-select{border:1.5px solid #E8E8E4;border-radius:10px;padding:10px 13px;font-size:14px;color:#111;background:#FAFAF9;font-family:inherit;outline:none;cursor:pointer;}
+.ig-select{border:1.5px solid #E8E8E4;border-radius:10px;padding:10px 13px;font-size:14px;color:#111;background:#FAFAF9;font-family:inherit;outline:none;cursor:pointer;width:100%;}
 .ig-row{display:flex;gap:12px;}
 .ig-row>*{flex:1;}
 .ig-row>.flex2{flex:2;}
@@ -66,10 +66,12 @@ const COMPANIES=[
 ];
 const MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const ABBR={scorpios:"SCR",coursiv:"CCY",finelo:"FCY"};
+const PAYMENT_METHODS=["Wire Transfer","Cash","Deel","Payoneer Account","Revolut Account","via link(card/paypal)"];
 
 const S={
   fromName:"Sachin Kumar",fromAddress:"C2/54 Sector 85, Faridabad, Haryana",
   fromCountry:"India",fromEmail:"calicorao@gmail.com",fromTaxId:"",
+  paymentMethod:"Wire Transfer",paymentDetails:"",
   companyId:"scorpios",day:"",month:"Mar",year:"2026",
   description:"Weekly invoice",quantity:"1",unitCost:"",
   currency:"$",
@@ -86,7 +88,7 @@ function getFilename(){
   return `${S.month} ${S.day} | ${calcTotal()} | ${S.fromName} (${ABBR[S.companyId]}).pdf`;
 }
 function isReady(){
-  return S.companyId&&S.day&&S.unitCost&&S.description&&S.fromName&&S.fromAddress&&S.fromCountry&&S.fromEmail;
+  return S.companyId&&S.day&&S.unitCost&&S.description&&S.fromName&&S.fromAddress&&S.fromCountry&&S.fromEmail&&S.paymentMethod;
 }
 window.setField=function(k,v){S[k]=v;updateDynamic();}
 window.setCurrency=function(c){S.currency=c;render();}
@@ -125,6 +127,17 @@ function buildPDF(){
   const fl=[S.fromAddress,S.fromCountry,S.fromEmail];
   if(S.fromTaxId)fl.push(`TAX/VAT: ${S.fromTaxId}`);
   fl.forEach((l,i)=>doc.text(l,C1,70+i*12));
+
+  // Payment info below bill from details
+  const payY=70+fl.length*12+8;
+  doc.setFont("helvetica","bold").setFontSize(8).setTextColor(...MID);
+  doc.text("PAYMENT METHOD",C1,payY);
+  doc.setFont("helvetica","normal").setFontSize(9).setTextColor(...DARK);
+  doc.text(S.paymentMethod,C1,payY+12);
+  if(S.paymentDetails){
+    doc.setTextColor(...MID);
+    doc.text(S.paymentDetails,C1,payY+24);
+  }
 
   doc.setFont("helvetica","bold").setFontSize(9).setTextColor(...MID);
   doc.text("BILL TO",C2,44);
@@ -208,6 +221,7 @@ function renderForm(){
   const monthOpts=MONTHS.map(m=>`<option${m===S.month?" selected":""}>${m}</option>`).join("");
   const cos=COMPANIES.map(c=>`<button class="ig-co-btn${c.id===S.companyId?" active":""}" onclick="setSelect('companyId','${c.id}')"><span class="ig-co-name">${c.name}</span><span class="ig-co-sub">${c.lines[2]} \u00B7 <strong>${ABBR[c.id]}</strong></span></button>`).join("");
   const prev=co?`<div class="ig-preview">${[co.name,...co.lines,...(co.extra?[co.extra]:[]),...(co.email?[co.email]:[])].map(l=>`<div class="ig-preview-line">${escH(l)}</div>`).join("")}</div>`:"";
+  const pmOpts=PAYMENT_METHODS.map(m=>`<option${m===S.paymentMethod?" selected":""}>${escH(m)}</option>`).join("");
 
   document.getElementById("ig-root").innerHTML=`
   <div class="ig-card">
@@ -220,6 +234,11 @@ function renderForm(){
       ${fld("Address","fromAddress")}
       <div class="ig-row"><div>${fld("Country","fromCountry")}</div><div class="flex2">${fld("Email","fromEmail","email@example.com")}</div></div>
       ${fld("TAX / VAT ID","fromTaxId","e.g. GB123456789",true)}
+      <div class="ig-field">
+        <label>Payment Method</label>
+        <select class="ig-select" onchange="setSelect('paymentMethod',this.value)">${pmOpts}</select>
+      </div>
+      ${fld("Payment Details","paymentDetails","e.g. IBAN, account number, Deel profile link…",true)}
     </div>
     <hr class="ig-divider">
     <div class="ig-section-label">Bill To</div>
