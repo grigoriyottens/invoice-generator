@@ -55,43 +55,42 @@ iframe.ig-frame{width:100%;height:80vh;border:none;background:#fff;}
 .ig-loading-overlay{position:fixed;inset:0;background:rgba(255,255,255,0.9);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;gap:12px;}
 .ig-spinner{width:28px;height:28px;border:3px solid #E8E8E4;border-top-color:#111;border-radius:50%;animation:spin .6s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg)}}
+.ig-drop{border:2px dashed #D0D0CC;border-radius:12px;padding:24px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:24px;background:#FAFAF9;}
+.ig-drop:hover,.ig-drop.over{border-color:#111;background:#F0F0EE;}
+.ig-drop-icon{font-size:28px;margin-bottom:8px;opacity:0.5;}
+.ig-drop-text{font-size:13px;color:#888;line-height:1.5;}
+.ig-drop-text strong{color:#555;}
+.ig-drop-input{display:none;}
+.ig-drop-parsing{display:flex;align-items:center;gap:10px;justify-content:center;padding:20px;}
+.ig-drop-parsing .ig-spinner{width:20px;height:20px;}
+.ig-drop-ok{background:#F0FDF4;border-color:#86EFAC;padding:14px;font-size:13px;color:#16A34A;font-weight:500;}
+.ig-drop-err{background:#FEF2F2;border-color:#FCA5A5;padding:14px;font-size:13px;color:#DC2626;font-weight:500;}
 </style>
 </head>
 <body>
-<div id="ig-root"><div style="display:flex;align-items:center;justify-content:center;height:200px;color:#999;font-size:14px;">Loading…</div></div>
+<div id="ig-root"><div style="display:flex;align-items:center;justify-content:center;height:200px;color:#999;font-size:14px;">Loading...</div></div>
 
 <script type="module">
 import { jsPDF } from 'https://esm.sh/jspdf@2.5.1';
 import autoTable from 'https://esm.sh/jspdf-autotable@3.8.3';
 
-let fontRegularB64 = null, fontBoldB64 = null, fontsReady = false;
+// ============================================================
+//  CONFIG — update this with your Railway app URL
+// ============================================================
+var API_URL = "https://invoice-automation-production.up.railway.app";
 
+var fontRegularB64 = null, fontBoldB64 = null, fontsReady = false;
 async function loadFonts() {
   try {
-    const [reg, bold] = await Promise.all([
-      fetch('https://cdn.jsdelivr.net/npm/dejavu-fonts-ttf@2.37.3/ttf/DejaVuSans.ttf').then(r => r.arrayBuffer()),
-      fetch('https://cdn.jsdelivr.net/npm/dejavu-fonts-ttf@2.37.3/ttf/DejaVuSans-Bold.ttf').then(r => r.arrayBuffer()),
+    var r = await Promise.all([
+      fetch('https://cdn.jsdelivr.net/npm/dejavu-fonts-ttf@2.37.3/ttf/DejaVuSans.ttf').then(function(r){return r.arrayBuffer();}),
+      fetch('https://cdn.jsdelivr.net/npm/dejavu-fonts-ttf@2.37.3/ttf/DejaVuSans-Bold.ttf').then(function(r){return r.arrayBuffer();}),
     ]);
-    fontRegularB64 = ab2b64(reg);
-    fontBoldB64 = ab2b64(bold);
-    fontsReady = true;
+    fontRegularB64 = ab2b64(r[0]); fontBoldB64 = ab2b64(r[1]); fontsReady = true;
   } catch (e) { console.warn('Font load failed', e); }
 }
-
-function ab2b64(buf) {
-  let b = ''; const u = new Uint8Array(buf);
-  for (let i = 0; i < u.byteLength; i++) b += String.fromCharCode(u[i]);
-  return btoa(b);
-}
-
-function regFonts(doc) {
-  if (!fontsReady) return 'helvetica';
-  doc.addFileToVFS('DV.ttf', fontRegularB64);
-  doc.addFont('DV.ttf', 'DV', 'normal');
-  doc.addFileToVFS('DVB.ttf', fontBoldB64);
-  doc.addFont('DVB.ttf', 'DV', 'bold');
-  return 'DV';
-}
+function ab2b64(buf){var b='';var u=new Uint8Array(buf);for(var i=0;i<u.byteLength;i++)b+=String.fromCharCode(u[i]);return btoa(b);}
+function regFonts(doc){if(!fontsReady)return'helvetica';doc.addFileToVFS('DV.ttf',fontRegularB64);doc.addFont('DV.ttf','DV','normal');doc.addFileToVFS('DVB.ttf',fontBoldB64);doc.addFont('DVB.ttf','DV','bold');return'DV';}
 
 var CO=[
   {id:"scorpios",name:"Scorpios Tech FZE",lines:["DTEC, Dubai Silicon Oasis","Dubai, AZ, 00000","United Arab Emirates"],email:"finance@scorpios.tech"},
@@ -110,7 +109,8 @@ var S={
   kzAccount:"",kzBinIin:"",kzBenefName:"",kzKbe:"",kzKnp:"",kzPurpose:"",
   companyId:"scorpios",day:"",month:"Apr",year:"2026",
   description:"",quantity:"1",unitCost:"",currency:"$",
-  view:"form",pdfUrl:"",pdfFilename:""
+  view:"form",pdfUrl:"",pdfFilename:"",
+  _dropState:"idle",_dropMsg:""
 };
 window._S=S;
 var lastDoc=null;
@@ -135,6 +135,66 @@ function upd(){
   if(fp){if(r&&t){fp.style.display="block";var fn=document.getElementById("ig-fntext");if(fn)fn.textContent=getFn();}else fp.style.display="none";}
 }
 
+// ── Invoice Parser (calls Railway API) ──────────────────────
+window.triggerUpload=function(){document.getElementById("ig-file-input").click();}
+
+window.handleFileChange=function(input){
+  if(input.files&&input.files[0])parseFile(input.files[0]);
+}
+
+window.handleDrop=function(ev){
+  ev.preventDefault();
+  var el=document.getElementById("ig-dropzone");
+  if(el)el.classList.remove("over");
+  var files=ev.dataTransfer&&ev.dataTransfer.files;
+  if(files&&files[0])parseFile(files[0]);
+}
+
+window.handleDragOver=function(ev){
+  ev.preventDefault();
+  var el=document.getElementById("ig-dropzone");
+  if(el)el.classList.add("over");
+}
+
+window.handleDragLeave=function(ev){
+  var el=document.getElementById("ig-dropzone");
+  if(el)el.classList.remove("over");
+}
+
+function parseFile(file){
+  var ext=file.name.toLowerCase().split(".").pop();
+  if(["pdf","png","jpg","jpeg","webp"].indexOf(ext)===-1){
+    S._dropState="error";S._dropMsg="Unsupported file. Use PDF, PNG, or JPG.";ren();return;
+  }
+  S._dropState="parsing";S._dropMsg=file.name;ren();
+
+  var fd=new FormData();
+  fd.append("file",file);
+
+  fetch(API_URL+"/parse-invoice",{method:"POST",body:fd})
+  .then(function(r){
+    if(!r.ok)return r.json().then(function(d){throw new Error(d.error||"Server error "+r.status);});
+    return r.json();
+  })
+  .then(function(d){
+    // Map response to form state
+    var fields=["fromName","fromAddress","fromCountry","fromEmail","fromTaxId",
+      "paymentMethod","paymentDetails","kzBankHolder","kzCpEmail","kzCpAddress",
+      "kzBankAddress","kzBankCountry","kzAccount","kzBinIin","kzBenefName",
+      "kzKbe","kzKnp","kzPurpose","companyId","description","quantity",
+      "unitCost","currency","day","month","year"];
+    fields.forEach(function(k){if(d[k]!==undefined&&d[k]!=="")S[k]=d[k];});
+    S._dropState="ok";S._dropMsg="Parsed: "+file.name;
+    ren();
+  })
+  .catch(function(e){
+    console.error("Parse error:",e);
+    S._dropState="error";S._dropMsg=e.message||"Failed to parse invoice";
+    ren();
+  });
+}
+
+// ── KZ Payment Lines for PDF ────────────────────────────────
 function kzL(){
   var l=[];
   if(S.kzBankHolder)l.push("Account Holder: "+S.kzBankHolder);
@@ -148,66 +208,45 @@ function kzL(){
   return l;
 }
 
+// ── PDF Builder ─────────────────────────────────────────────
 function mkPDF(){
-  var doc=new jsPDF({unit:"pt",format:"a4"});
-  var F=regFonts(doc);
-  var W=doc.internal.pageSize.getWidth();
-  var G=[235,235,233],D=[17,17,17],M=[120,120,115],L=[248,248,246];
-  var C1=40,C2=250,LH=12;
-  var co=CO.find(function(c){return c.id===S.companyId;});
-  var total=calcT(),uf=fmt(S.unitCost);
+  var doc=new jsPDF({unit:"pt",format:"a4"});var F=regFonts(doc);var W=doc.internal.pageSize.getWidth();
+  var G=[235,235,233],D=[17,17,17],M=[120,120,115],L=[248,248,246];var C1=40,C2=250,LH=12;
+  var co=CO.find(function(c){return c.id===S.companyId;});var total=calcT(),uf=fmt(S.unitCost);
   var ds=S.month+" "+S.day+", "+S.year;
   var fl=[S.fromName,S.fromAddress,S.fromCountry,S.fromEmail];
   if(S.fromTaxId)fl.push("TAX/VAT: "+S.fromTaxId);
   var lH=14+fl.length*LH+20+12+14;
   if(isKZ()){lH+=4+kzL().length*11;}else if(S.paymentDetails){lH+=12;}
-  var tr=[].concat(co.lines);
-  if(co.extra)tr.push(co.extra);
-  if(co.email)tr.push(co.email);
-  var rH=14+(1+tr.length)*LH;
-  var hH=Math.max(lH,rH,120)+54;
+  var tr=[].concat(co.lines);if(co.extra)tr.push(co.extra);if(co.email)tr.push(co.email);
+  var rH=14+(1+tr.length)*LH;var hH=Math.max(lH,rH,120)+54;
   doc.setFillColor(L[0],L[1],L[2]);doc.rect(0,0,W,hH,"F");
-  var y=36;
-  doc.setFont(F,"bold").setFontSize(9).setTextColor(M[0],M[1],M[2]);doc.text("BILL FROM",C1,y);y+=14;
-  doc.setFont(F,"normal").setFontSize(9).setTextColor(D[0],D[1],D[2]);doc.text(fl[0],C1,y);
-  doc.setTextColor(M[0],M[1],M[2]);
-  for(var i=1;i<fl.length;i++)doc.text(fl[i],C1,y+i*LH);
-  y+=fl.length*LH+12;
+  var y=36;doc.setFont(F,"bold").setFontSize(9).setTextColor(M[0],M[1],M[2]);doc.text("BILL FROM",C1,y);y+=14;
+  doc.setFont(F,"normal").setFontSize(9).setTextColor(D[0],D[1],D[2]);doc.text(fl[0],C1,y);doc.setTextColor(M[0],M[1],M[2]);
+  for(var i=1;i<fl.length;i++)doc.text(fl[i],C1,y+i*LH);y+=fl.length*LH+12;
   doc.setFont(F,"bold").setFontSize(8).setTextColor(M[0],M[1],M[2]);doc.text("PAYMENT METHOD",C1,y);y+=12;
   doc.setFont(F,"normal").setFontSize(9).setTextColor(D[0],D[1],D[2]);doc.text(S.paymentMethod,C1,y);y+=14;
   if(isKZ()){doc.setFontSize(8).setTextColor(M[0],M[1],M[2]);kzL().forEach(function(l,i){doc.text(l,C1,y+i*11);});}
   else if(S.paymentDetails){doc.setTextColor(M[0],M[1],M[2]).setFontSize(8);doc.text(S.paymentDetails,C1,y);}
-  var ry=36;
-  doc.setFont(F,"bold").setFontSize(9).setTextColor(M[0],M[1],M[2]);doc.text("BILL TO",C2,ry);ry+=14;
+  var ry=36;doc.setFont(F,"bold").setFontSize(9).setTextColor(M[0],M[1],M[2]);doc.text("BILL TO",C2,ry);ry+=14;
   doc.setFont(F,"normal").setFontSize(9).setTextColor(D[0],D[1],D[2]);doc.text(co.name,C2,ry);
   doc.setTextColor(M[0],M[1],M[2]);tr.forEach(function(l,i){doc.text(l,C2,ry+(i+1)*LH);});
-  var IX=W-40;
-  doc.setFont(F,"bold").setFontSize(22).setTextColor(D[0],D[1],D[2]);doc.text("Invoice",IX,52,{align:"right"});
+  var IX=W-40;doc.setFont(F,"bold").setFontSize(22).setTextColor(D[0],D[1],D[2]);doc.text("Invoice",IX,52,{align:"right"});
   doc.setFont(F,"normal").setFontSize(9).setTextColor(M[0],M[1],M[2]);doc.text("#1  \xB7 "+ds,IX,66,{align:"right"});
-  var bW=155,bH=40,bX=IX-bW,bY=78;
-  doc.setFillColor(D[0],D[1],D[2]);doc.roundedRect(bX,bY,bW,bH,6,6,"F");
+  var bW=155,bH=40,bX=IX-bW,bY=78;doc.setFillColor(D[0],D[1],D[2]);doc.roundedRect(bX,bY,bW,bH,6,6,"F");
   doc.setFontSize(8).setTextColor(180,180,175);doc.text("AMOUNT DUE",bX+10,bY+16);
   doc.setFont(F,"bold").setFontSize(16).setTextColor(255,255,255);doc.text(total,bX+10,bY+34);
   var dY=hH+8;doc.setDrawColor(G[0],G[1],G[2]).setLineWidth(1);doc.line(C1,dY,W-40,dY);
   autoTable(doc,{startY:dY+10,margin:{left:C1,right:40},head:[["#","Description","Qty","Unit Cost","Total"]],body:[[1,S.description,S.quantity,uf,total]],headStyles:{fillColor:G,textColor:M,fontStyle:"bold",fontSize:8,cellPadding:8,font:F},bodyStyles:{textColor:D,fontSize:9,lineColor:G,lineWidth:0.5,cellPadding:8,font:F},alternateRowStyles:{fillColor:[255,255,255]},columnStyles:{0:{cellWidth:30,halign:"center"},2:{cellWidth:45,halign:"right"},3:{cellWidth:72,halign:"right"},4:{cellWidth:72,halign:"right"}},theme:"grid",tableLineColor:G,tableLineWidth:0.5});
-  var ay=doc.lastAutoTable.finalY+20,TW=200,TX=W-40-TW;
-  doc.setFillColor(L[0],L[1],L[2]);doc.roundedRect(TX-8,ay-6,TW+8,82,6,6,"F");
+  var ay=doc.lastAutoTable.finalY+20,TW=200,TX=W-40-TW;doc.setFillColor(L[0],L[1],L[2]);doc.roundedRect(TX-8,ay-6,TW+8,82,6,6,"F");
   autoTable(doc,{startY:ay,margin:{left:TX,right:40},tableWidth:TW,body:[["Subtotal",total],["Tax (0%)",S.currency+"0.00"]],foot:[["Total",total]],bodyStyles:{textColor:M,fontSize:9,lineWidth:0,cellPadding:{top:5,bottom:5,left:6,right:6},font:F},footStyles:{textColor:D,fontStyle:"bold",fontSize:10,lineWidth:0,fillColor:false,cellPadding:{top:7,bottom:5,left:6,right:6},font:F},columnStyles:{0:{cellWidth:110,halign:"left"},1:{cellWidth:90,halign:"right"}},didParseCell:function(data){if(data.column.index===1)data.cell.styles.halign="right";},didDrawCell:function(data){if(data.section==="foot"&&data.column.index===0&&data.row.index===0){data.doc.setDrawColor(G[0],G[1],G[2]);data.doc.setLineWidth(0.5);data.doc.line(TX,data.cell.y,TX+TW,data.cell.y);}},theme:"plain"});
   return doc;
 }
 
-window.doGen=function(){
-  if(!isOK())return;
-  lastDoc=mkPDF();
-  S.pdfFilename=getFn();
-  S.pdfUrl=lastDoc.output("datauristring");
-  S.view="pdf";
-  ren();
-}
+window.doGen=function(){if(!isOK())return;lastDoc=mkPDF();S.pdfFilename=getFn();S.pdfUrl=lastDoc.output("datauristring");S.view="pdf";ren();}
 window.doDL=function(){if(lastDoc)lastDoc.save(S.pdfFilename);}
 
 function esc(s){return String(s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");}
-
 function fld(label,key,ph,opt,num){
   var o=opt?"<span class='opt'>optional</span>":"";
   var ev=num?"oninput=\"this.value=this.value.replace(/[^0-9.]/g,'');sf('"+key+"',this.value)\"":"oninput=\"sf('"+key+"',this.value)\"";
@@ -230,14 +269,32 @@ function kzForm(){
     +"</div>";
 }
 
+// ── Drop zone HTML ──────────────────────────────────────────
+function dropZone(){
+  if(S._dropState==="parsing"){
+    return "<div class='ig-drop ig-drop-parsing'><div class='ig-spinner'></div><span style='font-size:13px;color:#888;'>Parsing "+esc(S._dropMsg)+"...</span></div>";
+  }
+  if(S._dropState==="ok"){
+    return "<div class='ig-drop ig-drop-ok' onclick='triggerUpload()'>\u2705 "+esc(S._dropMsg)+" \u2014 fields filled. Drop another to re-parse.<input type='file' id='ig-file-input' class='ig-drop-input' accept='.pdf,.png,.jpg,.jpeg,.webp' onchange='handleFileChange(this)'></div>";
+  }
+  if(S._dropState==="error"){
+    return "<div class='ig-drop ig-drop-err' onclick='triggerUpload()'>\u274c "+esc(S._dropMsg)+"<br><span style='font-weight:400;font-size:12px;'>Click or drop to try again</span><input type='file' id='ig-file-input' class='ig-drop-input' accept='.pdf,.png,.jpg,.jpeg,.webp' onchange='handleFileChange(this)'></div>";
+  }
+  return "<div class='ig-drop' id='ig-dropzone' onclick='triggerUpload()' ondrop='handleDrop(event)' ondragover='handleDragOver(event)' ondragleave='handleDragLeave(event)'>"
+    +"<div class='ig-drop-icon'>\ud83d\udcc4</div>"
+    +"<div class='ig-drop-text'><strong>Drop an invoice here</strong> or click to browse<br>PDF, PNG, JPG \u2014 auto-fills all fields via AI</div>"
+    +"<input type='file' id='ig-file-input' class='ig-drop-input' accept='.pdf,.png,.jpg,.jpeg,.webp' onchange='handleFileChange(this)'>"
+    +"</div>";
+}
+
+// ── Render ───────────────────────────────────────────────────
 function ren(){
   if(S.view==="pdf"){
     document.getElementById("ig-root").innerHTML=
       "<div class='ig-pdf-wrap'><div class='ig-pdf-bar'><div><div class='ig-pdf-title'>Invoice ready</div><div class='ig-pdf-sub'>"+esc(S.pdfFilename)+"</div></div><div class='ig-pdf-actions'><button class='ig-back-btn' onclick=\"window._S.view='form';ren()\">\u2190 New Invoice</button><button class='ig-dl-btn' onclick='doDL()'>\u2193 Download PDF</button></div></div><iframe src='"+S.pdfUrl+"' class='ig-frame' title='Invoice Preview'></iframe></div>";
     return;
   }
-  var co=CO.find(function(c){return c.id===S.companyId;});
-  var total=calcT(),ready=isOK();
+  var co=CO.find(function(c){return c.id===S.companyId;});var total=calcT(),ready=isOK();
   var moH="";MO.forEach(function(m){moH+="<option"+(m===S.month?" selected":"")+">"+m+"</option>";});
   var coH="";CO.forEach(function(c){coH+="<button class='ig-co-btn"+(c.id===S.companyId?" active":"")+"' onclick=\"ss('companyId','"+c.id+"')\"><span class='ig-co-name'>"+c.name+"</span><span class='ig-co-sub'>"+c.lines[2]+" \xB7 <strong>"+AB[c.id]+"</strong></span></button>";});
   var prH="";if(co){prH="<div class='ig-preview'>";[co.name].concat(co.lines).concat(co.extra?[co.extra]:[]).concat(co.email?[co.email]:[]).forEach(function(l){prH+="<div class='ig-preview-line'>"+esc(l)+"</div>";});prH+="</div>";}
@@ -251,6 +308,7 @@ function ren(){
   +"<div class='ig-badge'><span class='ig-badge-dot'></span>Invoice Generator</div>"
   +"<div class='ig-title'>New Invoice</div>"
   +"<div class='ig-sub'>Invoice #1 \xB7 Always</div>"
+  +dropZone()
   +"<div class='ig-section-label'>Bill From</div>"
   +"<div class='ig-stack'>"
     +fld("Full Name","fromName","Full legal name",false,false)
@@ -289,7 +347,7 @@ function ren(){
 window.ren=ren;
 
 (async function(){
-  document.getElementById("ig-root").innerHTML="<div class='ig-loading-overlay'><div class='ig-spinner'></div><span style='font-size:13px;color:#888;'>Loading fonts\u2026</span></div>";
+  document.getElementById("ig-root").innerHTML="<div class='ig-loading-overlay'><div class='ig-spinner'></div><span style='font-size:13px;color:#888;'>Loading fonts...</span></div>";
   await loadFonts();
   ren();
 })();
